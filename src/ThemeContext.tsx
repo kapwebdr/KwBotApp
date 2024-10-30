@@ -22,8 +22,13 @@ export const ThemeProvider: React.FC = ({ children }) => {
     await saveTheme(newTheme === darkTheme);
   };
 
+  const contextValue = React.useMemo(() => ({
+    ...theme,
+    toggleTheme,
+  }), [theme]);
+
   return (
-    <ThemeContext.Provider value={{ ...theme, toggleTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

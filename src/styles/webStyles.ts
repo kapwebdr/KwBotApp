@@ -1,0 +1,46 @@
+export const webSelectStyles = {
+  select: {
+    backgroundColor: 'transparent',
+    color: 'inherit',
+    border: 'none',
+    borderRadius: '5px',
+    padding: '5px',
+    fontSize: '14px',
+    outline: 'none',
+    cursor: 'pointer',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    appearance: 'none',
+    width: '100%',
+  },
+  selectContainer: {
+    position: 'relative',
+    backgroundColor: 'var(--input-background)',
+    borderRadius: '4px',
+    padding: '4px',
+    minWidth: '120px',
+  },
+  selectIcon: {
+    position: 'absolute',
+    right: '8px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    pointerEvents: 'none',
+  },
+  selectDisabled: {
+    opacity: 0.5,
+    cursor: 'wait',
+  },
+  codeBlock: {
+    margin: 0,
+    borderRadius: '4px',
+  },
+  copyButton: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '4px',
+    padding: '4px',
+  },
+}; 

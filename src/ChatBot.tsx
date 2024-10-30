@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, Alert, Animated, TouchableWithoutFeedback, Modal, ScrollView, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Alert, Animated, TouchableWithoutFeedback, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatOpenAI } from '@langchain/openai';
-import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -17,8 +16,15 @@ import { lightTheme, darkTheme, getTheme, saveTheme } from './theme';
 import * as FileSystem from 'expo-file-system';
 import ConfirmationModal from './ConfirmationModal';
 import UrlInputModal from './UrlInputModal';
-import { getAvailableModels, loadModel, streamChatCompletion, loadSessionId, stopGeneration } from './api';
+import { getAvailableModels, loadModel, streamChatCompletion, loadSessionId, stopGeneration, generateImage, refineImage, analyzeImage, extractTextFromImage } from './api';
 import ErrorModal from './ErrorModal';
+import { TOOLS, ToolType } from './types';
+import { MessageBubble } from './components/MessageBubble';
+import { ToolBar } from './components/ToolBar';
+import { ToolOptionsBar } from './components/ToolOptionsBar';
+import { ToolComponent } from './components/Tool';
+import { createStyles } from './styles/theme.styles';
+import { Sidebar } from './components/Sidebar';
 
 interface Message {
   role: 'human' | 'ai';
@@ -62,6 +68,34 @@ const ChatBot: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApiAvailable, setIsApiAvailable] = useState(true);
   const [apiErrorMessage, setApiErrorMessage] = useState('');
+  const [currentTool, setCurrentTool] = useState<ToolType>('chat');
+  const [tempImageData, setTempImageData] = useState<string | null>(null);
+  const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<{
+    base64: string;
+    name: string;
+    type: string;
+  } | null>(null);
+  const [toolConfigs, setToolConfigs] = useState<Record<ToolType, any>>({
+    'chat': {
+      systemMessage: "Vous êtes un assistant IA utile.",
+      model: '',
+    },
+    'image-generation': {
+      modelType: 'sdxl-turbo',
+      width: 1024,
+      height: 1024,
+      steps: 20,
+    },
+    'image-analysis': {
+      labels: ['chat', 'chien', 'oiseau', 'personne', 'voiture'],
+    },
+    'image-refine': {
+      strength: 0.3,
+      steps: 20,
+    },
+    'ocr': {},
+  });
 
   useEffect(() => {
     const loadSavedTheme = async () => {
@@ -164,30 +198,45 @@ const ChatBot: React.FC = () => {
   };
 
   const handleFileUpload = async () => {
+    const currentToolConfig = TOOLS.find(tool => tool.id === currentTool);
+    if (!currentToolConfig?.acceptsFile) return;
+
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/*', 'application/pdf'],
+        type: currentToolConfig.fileTypes || '*/*',
         copyToCacheDirectory: false,
-        multiple: true,
       });
 
       if (result.type === 'success') {
-        const files = Array.isArray(result) ? result : [result];
-        for (const file of files) {
-          let fileContent: string;
-          if (Platform.OS === 'web') {
-            const response = await fetch(file.uri);
-            fileContent = await response.text();
-          } else {
-            fileContent = await FileSystem.readAsStringAsync(file.uri);
-          }
-          await processAndStoreDocument(fileContent, file.name);
+        let base64Content: string;
+        
+        if (Platform.OS === 'web') {
+          const response = await fetch(result.uri);
+          const blob = await response.blob();
+          base64Content = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64String = reader.result as string;
+              resolve(base64String);
+            };
+            reader.readAsDataURL(blob);
+          });
+        } else {
+          const fileContent = await FileSystem.readAsStringAsync(result.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          base64Content = `data:${result.mimeType};base64,${fileContent}`;
         }
-        Alert.alert('Succès', 'Les documents ont été traités et stockés avec succès.');
+
+        setPendingFile({
+          base64: base64Content,
+          name: result.name,
+          type: result.mimeType || 'application/octet-stream'
+        });
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des fichiers:', error);
-      Alert.alert('Erreur', 'Impossible de charger les fichiers.');
+      console.error('Erreur lors du chargement du fichier:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors du chargement du fichier');
     }
   };
 
@@ -247,18 +296,33 @@ const ChatBot: React.FC = () => {
       try {
         const models = await getAvailableModels();
         setAvailableModels(models);
+        
+        // Mettre à jour les options de sélection du modèle dans les outils
+        const updatedTools = TOOLS.map(tool => {
+          if (tool.id === 'chat') {
+            const modelField = tool.configFields?.find(field => field.name === 'model');
+            if (modelField) {
+              modelField.options = models;
+            }
+          }
+          return tool;
+        });
+        
         if (models.length > 0) {
           const firstModel = models[0];
           setSelectedModel(firstModel);
+          setToolConfigs(prev => ({
+            ...prev,
+            chat: {
+              ...prev.chat,
+              model: firstModel
+            }
+          }));
           
           const success = await loadModel(
             firstModel,
-            (progress) => {
-              setLoadingProgress(progress);
-            },
-            (status) => {
-              setLoadingStatus(status);
-            }
+            (progress) => setLoadingProgress(progress),
+            (status) => setLoadingStatus(status)
           );
 
           if (!success) {
@@ -288,50 +352,244 @@ const ChatBot: React.FC = () => {
   }, [isWaitingFirstResponse]);
 
   const handleSend = async () => {
-    if (!input.trim() || !selectedModel || !currentConversationId || isGenerating) return;
+    if ((!input.trim() && !pendingFile) || isGenerating) return;
 
-    const newMessages = [
-      ...messages,
-      { role: 'user', content: input } as Message,
-    ];
-    setMessages(newMessages);
-    setInput('');
-
-    try {
+    if (pendingFile) {
+      const base64Content = pendingFile.base64.split(',')[1];
       setIsGenerating(true);
-      const aiMessage: Message = {
-        role: 'assistant',
-        content: '...',
-      };
-      setMessages([...newMessages, aiMessage]);
-      setIsWaitingFirstResponse(true);
 
-      await streamChatCompletion(
-        selectedModel,
-        newMessages,
-        systemMessage,
-        (chunk) => {
-          if (isWaitingFirstResponse) {
-            setIsWaitingFirstResponse(false);
-          }
-          aiMessage.content = isWaitingFirstResponse ? chunk : aiMessage.content + chunk;
-          setMessages([...newMessages, { ...aiMessage }]);
+      try {
+        switch (currentTool) {
+          case 'image-analysis':
+            const labels = ['chat', 'chien', 'oiseau', 'personne', 'voiture'];
+            
+            // Ajouter le message de l'utilisateur immédiatement
+            const userMessage = { 
+              role: 'human', 
+              content: pendingFile.type.startsWith('image/') 
+                ? `![${pendingFile.name}](${pendingFile.base64})`
+                : pendingFile.name
+            };
+            setMessages([...messages, userMessage]);
+            scrollToBottom();
+
+            // Ajouter un message temporaire pour l'analyse
+            const tempAnalysisMessage = {
+              role: 'ai',
+              content: 'Analyse de l\'image en cours...'
+            };
+            setMessages(prev => [...prev, tempAnalysisMessage]);
+            scrollToBottom();
+
+            const analysisResult = await analyzeImage({
+              image: base64Content,
+              labels
+            });
+
+            // Mettre à jour avec le résultat final
+            setMessages(prev => [
+              ...prev.slice(0, -1),
+              {
+                role: 'ai',
+                content: `Résultats de l'analyse:\n${JSON.stringify(analysisResult, null, 2)}`
+              }
+            ]);
+            scrollToBottom();
+            break;
+
+          case 'ocr':
+            // Ajouter le message de l'utilisateur immédiatement
+            const userOcrMessage = { 
+              role: 'human', 
+              content: pendingFile.type.startsWith('image/') 
+                ? `![${pendingFile.name}](${pendingFile.base64})`
+                : pendingFile.name
+            };
+            setMessages([...messages, userOcrMessage]);
+            scrollToBottom();
+
+            // Ajouter un message temporaire pour l'OCR
+            const tempOcrMessage = {
+              role: 'ai',
+              content: 'Extraction du texte en cours...'
+            };
+            setMessages(prev => [...prev, tempOcrMessage]);
+            scrollToBottom();
+
+            const ocrResult = await extractTextFromImage({
+              image: base64Content
+            });
+
+            // Mettre à jour avec le résultat final
+            setMessages(prev => [
+              ...prev.slice(0, -1),
+              {
+                role: 'ai',
+                content: `Texte extrait:\n${ocrResult.text}`
+              }
+            ]);
+            scrollToBottom();
+            break;
+
+          case 'image-refine':
+            if (!input.trim()) {
+              Alert.alert('Erreur', 'Veuillez décrire les modifications souhaitées');
+              return;
+            }
+            setIsGenerating(true);
+            try {
+              await refineImage(
+                {
+                  image: base64Content,
+                  prompt: input,
+                  strength: 0.3,
+                },
+                (progress) => {
+                  setLoadingProgress(progress);
+                },
+                (imageBase64) => {
+                  const newMessage = {
+                    role: 'ai',
+                    content: `![Refined Image](data:image/png;base64,${imageBase64})`,
+                  };
+                  setMessages([
+                    ...messages, 
+                    { 
+                      role: 'human', 
+                      content: `![${pendingFile.name}](${pendingFile.base64})\n\n${input}`
+                    }, 
+                    newMessage
+                  ]);
+                }
+              );
+            } catch (error) {
+              console.error('Erreur lors du raffinement de l\'image:', error);
+              Alert.alert('Erreur', 'Une erreur est survenue lors du raffinement de l\'image');
+            } finally {
+              setIsGenerating(false);
+            }
+            break;
         }
-      );
+      } catch (error) {
+        console.error('Erreur lors du traitement:', error);
+        Alert.alert('Erreur', 'Une erreur est survenue lors du traitement');
+      } finally {
+        setIsGenerating(false);
+        setPendingFile(null);
+        setInput('');
+      }
+      return;
+    }
 
-      const updatedConversations = conversations.map(conv =>
-        conv.id === currentConversationId
-          ? { ...conv, messages: [...newMessages, aiMessage], timestamp: Date.now() }
-          : conv
-      );
-      setConversations(updatedConversations);
-      await saveConversations(updatedConversations);
-    } catch (error) {
-      console.error('Erreur lors de l\'appel à l\'API:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de l\'envoi du message.');
-    } finally {
-      setIsWaitingFirstResponse(false);
-      setIsGenerating(false);
+    switch (currentTool) {
+      case 'image-generation':
+        setIsGenerating(true);
+        try {
+          await generateImage(
+            {
+              model_type: "sdxl-turbo", // Vous pouvez ajouter un sélecteur de modèle si nécessaire
+              prompt: input,
+            },
+            (progress) => {
+              setLoadingProgress(progress);
+            },
+            (imageBase64) => {
+              // Ajouter l'image générée aux messages
+              const newMessage = {
+                role: 'ai',
+                content: `![Generated Image](data:image/png;base64,${imageBase64})`,
+              };
+              setMessages([...messages, { role: 'human', content: input }, newMessage]);
+            }
+          );
+        } catch (error) {
+          console.error('Erreur lors de la génération de l\'image:', error);
+          Alert.alert('Erreur', 'Une erreur est survenue lors de la génération de l\'image');
+        } finally {
+          setIsGenerating(false);
+          setInput('');
+        }
+        break;
+
+      case 'image-refine':
+        if (!tempImageData) {
+          Alert.alert('Erreur', 'Veuillez d\'abord sélectionner une image à raffiner');
+          return;
+        }
+        setIsGenerating(true);
+        try {
+          await refineImage(
+            {
+              image: tempImageData,
+              prompt: input,
+              strength: 0.3, // Valeur par défaut, vous pouvez la rendre configurable
+            },
+            (progress) => {
+              setLoadingProgress(progress);
+            },
+            (imageBase64) => {
+              const newMessage = {
+                role: 'ai',
+                content: `![Refined Image](data:image/png;base64,${imageBase64})`,
+              };
+              setMessages([...messages, { role: 'human', content: input }, newMessage]);
+              setTempImageData(null); // Réinitialiser l'image temporaire
+            }
+          );
+        } catch (error) {
+          console.error('Erreur lors du raffinement de l\'image:', error);
+          Alert.alert('Erreur', 'Une erreur est survenue lors du raffinement de l\'image');
+        } finally {
+          setIsGenerating(false);
+          setInput('');
+        }
+        break;
+
+      default:
+        const newMessages = [
+          ...messages,
+          { role: 'human', content: input } as Message,
+        ];
+        setMessages(newMessages);
+        setInput('');
+
+        try {
+          setIsGenerating(true);
+          const aiMessage: Message = {
+            role: 'assistant',
+            content: '...',
+          };
+          setMessages([...newMessages, aiMessage]);
+          setIsWaitingFirstResponse(true);
+
+          await streamChatCompletion(
+            selectedModel,
+            newMessages,
+            systemMessage,
+            (chunk) => {
+              if (isWaitingFirstResponse) {
+                setIsWaitingFirstResponse(false);
+              }
+              aiMessage.content = isWaitingFirstResponse ? chunk : aiMessage.content + chunk;
+              setMessages([...newMessages, { ...aiMessage }]);
+            }
+          );
+
+          const updatedConversations = conversations.map(conv =>
+            conv.id === currentConversationId
+              ? { ...conv, messages: [...newMessages, aiMessage], timestamp: Date.now() }
+              : conv
+          );
+          setConversations(updatedConversations);
+          await saveConversations(updatedConversations);
+        } catch (error) {
+          console.error('Erreur lors de l\'appel à l\'API:', error);
+          Alert.alert('Erreur', 'Une erreur est survenue lors de l\'envoi du message.');
+        } finally {
+          setIsWaitingFirstResponse(false);
+          setIsGenerating(false);
+        }
+        break;
     }
   };
 
@@ -472,6 +730,42 @@ const ChatBot: React.FC = () => {
   );
 
   const renderMessage = (item: Message) => {
+    // Vérifier si le contenu est une image base64
+    const imageMatch = item.content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[^)]+)\)/);
+    
+    if (imageMatch) {
+      const base64Data = imageMatch[1];
+      return (
+        <View style={[
+          styles.messageBubble,
+          item.role === 'human' ? styles.userBubble : styles.aiBubble
+        ]}>
+          {isGenerating ? (
+            <View style={styles.imageGenerationProgress}>
+              <Text style={[styles.messageText, item.role === 'human' ? styles.userText : styles.aiText]}>
+                Génération de l'image en cours...
+              </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${loadingProgress * 100}%` }
+                  ]} 
+                />
+              </View>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: base64Data }}
+              style={styles.messageImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      );
+    }
+
+    // Si ce n'est pas une image, continuer avec le rendu normal du message
     const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
     const parts = item.content.split(codeBlockRegex);
 
@@ -505,7 +799,7 @@ const ChatBot: React.FC = () => {
 
   const scrollToBottom = () => {
     if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: false });
+      flatListRef.current.scrollToEnd({ animated: true });
     }
   };
 
@@ -659,279 +953,67 @@ const ChatBot: React.FC = () => {
     init();
   }, []);
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 10,
-      height: 60,
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-    },
-    contentContainer: {
-      flex: 1,
-      marginTop: 60,
-      marginBottom: 60,
-    },
-    messageList: {
-      paddingHorizontal: 15,
-      paddingVertical: 20,
-    },
-    inputContainer: {
-      flexDirection: 'row',
-      padding: 10,
-      backgroundColor: theme.colors.background, // Utiliser la couleur de fond du thème
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border, // Utiliser la couleur de bordure du thème
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-    },
-    sidebar: {
-      position: 'absolute',
-      left: 0,
-      top: 60, // Ajustez cette valeur pour qu'elle corresponde à la hauteur de votre barre supérieure
-      bottom: 0,
-      width: SIDEBAR_WIDTH,
-      backgroundColor: theme.colors.background,
-      borderRightWidth: 1,
-      borderRightColor: theme.colors.border,
-      zIndex: 5, // Assurez-vous que ce zIndex est inférieur à celui de la barre supérieure
-    },
-    newConversationButton: {
-      padding: 15,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-    },
-    newConversationButtonText: {
-      color: '#FFFFFF',
-      fontWeight: 'bold',
-    },
-    conversationItemContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderBottomWidth: 1,
-      borderBottomColor: '#E0E0E0',
-    },
-    conversationItem: {
-      flex: 1,
-      padding: 15,
-    },
-    conversationTimestamp: {
-      fontSize: theme.fontSizes.small,
-      color: '#999',
-    },
-    conversationPreview: {
-      fontSize: theme.fontSizes.medium,
-      color: theme.colors.text,
-      marginTop: 5,
-    },
-    messageBubble: {
-      maxWidth: '80%',
-      padding: 12,
-      borderRadius: 20,
-      marginBottom: 10,
-    },
-    userBubble: {
-      alignSelf: 'flex-end',
-      backgroundColor: theme.colors.userBubble,
-    },
-    aiBubble: {
-      alignSelf: 'flex-start',
-      backgroundColor: theme.colors.aiBubble,
-      borderWidth: 1,
-      borderColor: '#E0E0E0',
-    },
-    messageText: {
-      fontSize: theme.fontSizes.medium,
-    },
-    userText: {
-      color: theme.colors.userText,
-    },
-    aiText: {
-      color: theme.colors.aiText,
-    },
-    input: {
-      flex: 1,
-      backgroundColor: theme.colors.inputBackground, // Déjà correct, mais assurez-vous que c'est bien défini
-      borderRadius: 20,
-      paddingHorizontal: 15,
-      paddingVertical: 10,
-      fontSize: theme.fontSizes.medium,
-      color: theme.colors.text,
-    },
-    sendButton: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 10,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.colors.inputBackground, // Utiliser la même couleur que l'input
-    },
-    deleteButton: {
-      padding: 15,
-    },
-    modalOverlay: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-      backgroundColor: 'white',
-      padding: 20,
-      borderRadius: 10,
-      alignItems: 'center',
-    },
-    modalText: {
-      fontSize: 18,
-      marginBottom: 20,
-      textAlign: 'center',
-    },
-    modalButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      width: '100%',
-    },
-    modalButton: {
-      padding: 10,
-      borderRadius: 5,
-      backgroundColor: '#4A90E2',
-    },
-    modalButtonDanger: {
-      backgroundColor: 'red',
-    },
-    modalButtonText: {
-      color: 'white',
-      fontWeight: 'bold',
-    },
-    uploadButton: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 10,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.colors.inputBackground, // Utiliser la même couleur que l'input
-    },
-    codeBlockContainer: {
-      marginVertical: 10,
-      borderRadius: 8,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    codeBlock: {
-      padding: 10,
-      fontSize: 14,
-      borderRadius: 8,
-    },
-    copyButton: {
-      position: 'absolute',
-      top: 5,
-      right: 5,
-      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-      borderRadius: 12,
-      padding: 4,
-      borderWidth: 1,
-      borderColor: theme.colors.primary,
-    },
-    systemMessageInput: {
-      flex: 1,
-      marginHorizontal: 10,
-      padding: 5,
-      borderRadius: 5,
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      color: 'white',
-      fontSize: 14,
-    },
-    headerControls: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginHorizontal: 10,
-    },
-    modelSelectContainer: {
-      flex: 1,
-      position: 'relative',
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      borderRadius: 5,
-      minWidth: 120,
-    },
-    modelSelectIcon: {
-      position: 'absolute',
-      right: 5,
-      top: '50%',
-      transform: [{ translateY: -8 }],
-      pointerEvents: 'none',
-    },
-    loadingProgressContainer: {
-      position: 'absolute',
-      top: '100%',
-      left: 0,
-      right: 0,
-      padding: 8,
-      backgroundColor: theme.colors.background,
-      borderRadius: 4,
-      marginTop: 4,
-      zIndex: 1000,
-    },
-    loadingText: {
-      color: theme.colors.text,
-      fontSize: 12,
-      marginBottom: 4,
-    },
-    progressBar: {
-      height: 4,
-      backgroundColor: theme.colors.border,
-      borderRadius: 2,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      backgroundColor: theme.colors.primary,
-    },
-    inputDisabled: {
-      opacity: 0.7,
-    },
-    sendButtonDisabled: {
-      opacity: 0.7,
-    },
-    stopButton: {
-      backgroundColor: 'rgba(255, 0, 0, 0.1)',
-    },
-  });
+  const renderToolSelector = () => (
+    <View style={styles.toolSelector}>
+      <TouchableOpacity
+        style={[
+          styles.toolDropdownButton,
+          isToolMenuOpen && styles.toolDropdownButtonActive
+        ]}
+        onPress={() => setIsToolMenuOpen(!isToolMenuOpen)}
+      >
+        <View style={styles.toolDropdownContent}>
+          <Ionicons 
+            name={TOOLS.find(t => t.id === currentTool)?.icon || 'apps'} 
+            size={20} 
+            color={theme.colors.text} 
+          />
+          <Text style={styles.toolDropdownText}>
+            {TOOLS.find(t => t.id === currentTool)?.label || 'Sélectionner un outil'}
+          </Text>
+          <Ionicons 
+            name={isToolMenuOpen ? "chevron-up" : "chevron-down"} 
+            size={20} 
+            color={theme.colors.text} 
+          />
+        </View>
+      </TouchableOpacity>
+      {isToolMenuOpen && (
+        <View style={styles.toolDropdownMenu}>
+          {TOOLS.map((tool) => (
+            <TouchableOpacity
+              key={tool.id}
+              style={[
+                styles.toolMenuItem,
+                currentTool === tool.id && styles.toolMenuItemActive
+              ]}
+              onPress={() => {
+                setCurrentTool(tool.id);
+                setIsToolMenuOpen(false);
+              }}
+            >
+              <Ionicons 
+                name={tool.icon} 
+                size={20} 
+                color={currentTool === tool.id ? theme.colors.primary : theme.colors.text} 
+              />
+              <Text style={[
+                styles.toolMenuItemText,
+                currentTool === tool.id && styles.toolMenuItemTextActive
+              ]}>
+                {tool.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 
-  if (!isApiAvailable) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ErrorModal
-          isVisible={true}
-          onRetry={handleRetryConnection}
-          message={apiErrorMessage}
-        />
-      </View>
-    );
-  }
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity onPress={toggleSidebar}>
-          <Ionicons name="menu" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <View style={styles.headerControls}>
+  const renderToolSpecificControls = () => {
+    if (currentTool === 'chat') {
+      return (
+        <View style={styles.toolControls}>
           <TextInput
             style={styles.systemMessageInput}
             value={systemMessage}
@@ -940,19 +1022,6 @@ const ChatBot: React.FC = () => {
             placeholderTextColor={theme.colors.text}
           />
           <View style={styles.modelSelectContainer}>
-            {isModelLoading && (
-              <View style={styles.loadingProgressContainer}>
-                <Text style={styles.loadingText}>
-                  {loadingStatus === 'exists' ? 'Modèle déjà chargé' :
-                   loadingStatus === 'completed' ? 'Téléchargement terminé' :
-                   loadingStatus === 'loaded' ? 'Modèle chargé' :
-                   `Chargement: ${Math.round(loadingProgress * 100)}%`}
-                </Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${loadingProgress * 100}%` }]} />
-                </View>
-              </View>
-            )}
             <select
               value={selectedModel}
               onChange={(e) => handleModelChange(e.target.value)}
@@ -978,104 +1047,174 @@ const ChatBot: React.FC = () => {
                 </option>
               ))}
             </select>
-            <Animated.View 
-              style={[
-                styles.modelSelectIcon,
-                isModelLoading && { transform: [{ rotate: spin }] }
-              ]}
-            >
-              <Ionicons 
-                name={isModelLoading ? "reload" : "chevron-down"}
-                size={16} 
-                color={theme.colors.text}
-              />
-            </Animated.View>
           </View>
         </View>
+      );
+    }
+    // Ajoutez ici les contrôles spécifiques pour les autres outils
+    return null;
+  };
+
+  const handleConfigChange = (toolId: ToolType, config: any) => {
+    setToolConfigs(prev => ({
+      ...prev,
+      [toolId]: config
+    }));
+
+    if (toolId === 'chat') {
+      if ('systemMessage' in config) {
+        setSystemMessage(config.systemMessage);
+      }
+      if ('model' in config) {
+        handleModelChange(config.model);
+      }
+    }
+  };
+
+  const styles = createStyles(theme, currentTool);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isToolMenuOpen) {
+        setIsToolMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isToolMenuOpen]);
+
+  const renderCurrentTool = () => {
+    const tool = TOOLS.find(t => t.id === currentTool);
+    if (!tool) return null;
+
+    return (
+      <ToolComponent
+        toolId={currentTool}
+        config={toolConfigs[currentTool]}
+        onConfigChange={(config) => handleConfigChange(currentTool, config)}
+        input={input}
+        setInput={setInput}
+        isGenerating={isGenerating}
+        handleSend={handleSend}
+        handleStop={handleStop}
+        handleFileUpload={handleFileUpload}
+        handleUrlInput={handleUrlInput}
+        pendingFile={pendingFile}
+        setPendingFile={setPendingFile}
+        systemMessage={systemMessage}
+        updateSystemMessage={updateSystemMessage}
+        selectedModel={selectedModel}
+        availableModels={availableModels}
+        isModelLoading={isModelLoading}
+        onModelChange={handleModelChange}
+      />
+    );
+  };
+
+  if (!isApiAvailable) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ErrorModal
+          isVisible={true}
+          onRetry={handleRetryConnection}
+          message={apiErrorMessage}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity onPress={toggleSidebar}>
+          <Ionicons name="menu" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+        
+        <View style={styles.headerContent}>
+          <ToolBar
+            currentTool={currentTool}
+            isToolMenuOpen={isToolMenuOpen}
+            setIsToolMenuOpen={setIsToolMenuOpen}
+            setCurrentTool={setCurrentTool}
+            tools={TOOLS}
+          />
+        </View>
+
         <TouchableOpacity onPress={toggleDarkMode}>
           <Ionicons name={theme === darkTheme ? "sunny" : "moon"} size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
+
       <View style={styles.contentContainer}>
         <FlatList
           ref={flatListRef}
           data={messages}
           keyExtractor={(item, index) => `message-${index}`}
-          renderItem={({ item }) => renderMessage(item)}
+          renderItem={({ item }) => (
+            <MessageBubble
+              message={item}
+              isGenerating={isGenerating}
+              loadingProgress={loadingProgress}
+              dots={dots}
+              isWaitingFirstResponse={isWaitingFirstResponse}
+              renderCodeBlock={renderCodeBlock}
+            />
+          )}
           contentContainerStyle={styles.messageList}
           onContentSizeChange={scrollToBottom}
           onLayout={scrollToBottom}
         />
       </View>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 60}
-        style={[styles.inputContainer, { backgroundColor: theme.colors.background }]}
-      >
-        <TouchableOpacity style={styles.uploadButton} onPress={handleFileUpload}>
-          <Ionicons name="document-attach" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.uploadButton} onPress={handleUrlInput}>
-          <Ionicons name="link" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <TextInput
-          style={[
-            styles.input,
-            isGenerating && styles.inputDisabled
-          ]}
-          value={input}
-          onChangeText={setInput}
-          placeholder={isGenerating ? "Génération en cours..." : "Tapez votre message..."}
-          placeholderTextColor="#999"
-          onKeyPress={handleKeyPress}
-          multiline
-          editable={!isGenerating}
-        />
-        {isGenerating ? (
-          <TouchableOpacity 
-            style={[styles.sendButton, styles.stopButton]}
-            onPress={handleStop}
-          >
-            <Ionicons 
-              name="stop" 
-              size={24} 
-              color="red"
-            />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={[
-              styles.sendButton,
-              (!input.trim() || isGenerating) && styles.sendButtonDisabled
-            ]}
-            onPress={handleSend} 
-            disabled={!input.trim() || isGenerating}
-          >
-            <Ionicons 
-              name="send" 
-              size={24} 
-              color={!input.trim() || isGenerating ? "#999" : theme.colors.primary} 
-            />
-          </TouchableOpacity>
-        )}
-      </KeyboardAvoidingView>
+
+      {/* Configuration des outils */}
+      <ToolOptionsBar
+        currentTool={currentTool}
+        config={toolConfigs[currentTool]}
+        onConfigChange={(config) => handleConfigChange(currentTool, config)}
+      />
+
+      {/* Affichage du Tool actif */}
+      {renderCurrentTool()}
+
       {isSidebarOpen && (
         <TouchableWithoutFeedback onPress={closeSidebar}>
           <View style={styles.sidebarOverlay} />
         </TouchableWithoutFeedback>
       )}
-      {renderSidebar()}
+
+      <Sidebar
+        isOpen={isSidebarOpen}
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        sidebarAnimation={sidebarAnimation}
+        onNewConversation={startNewConversation}
+        onLoadConversation={loadConversation}
+        onDeleteConversation={deleteConversation}
+      />
+
       <ConfirmationModal
         isVisible={confirmationModal.isVisible}
         onConfirm={confirmationModal.onConfirm}
         onCancel={hideConfirmation}
         message={confirmationModal.message}
       />
+
       <UrlInputModal
         isVisible={urlInputModalVisible}
         onSubmit={processUrl}
         onCancel={() => setUrlInputModalVisible(false)}
       />
+
+      {!isApiAvailable && (
+        <ErrorModal
+          isVisible={true}
+          onRetry={handleRetryConnection}
+          message={apiErrorMessage}
+        />
+      )}
     </View>
   );
 };
