@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import ChatBot from './src/ChatBot';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemeProvider } from './src/ThemeContext';
+import { ThemeProvider } from './src/contexts/ThemeContext';
 
 export default function App() {
   useEffect(() => {

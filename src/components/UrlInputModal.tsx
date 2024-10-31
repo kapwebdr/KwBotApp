@@ -1,15 +1,15 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
-import { useTheme } from './ThemeContext';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
-interface ConfirmationModalProps {
+interface UrlInputModalProps {
   isVisible: boolean;
-  onConfirm: () => void;
+  onSubmit: (url: string) => void;
   onCancel: () => void;
-  message: string;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConfirm, onCancel, message }) => {
+const UrlInputModal: React.FC<UrlInputModalProps> = ({ isVisible, onSubmit, onCancel }) => {
+  const [url, setUrl] = useState('');
   const theme = useTheme();
 
   if (!isVisible) return null;
@@ -18,13 +18,23 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConf
     <Modal transparent={true} animationType="fade">
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
-          <Text style={[styles.modalText, { color: theme.colors.text }]}>{message}</Text>
+          <Text style={[styles.modalText, { color: theme.colors.text }]}>Entrez l'URL du document à traiter</Text>
+          <TextInput
+            style={[styles.modalInput, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text }]}
+            value={url}
+            onChangeText={setUrl}
+            placeholder="https://example.com/document.txt"
+            placeholderTextColor={theme.colors.text}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
           <View style={styles.modalButtons}>
             <TouchableOpacity onPress={onCancel} style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}>
               <Text style={styles.modalButtonText}>Annuler</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onConfirm} style={[styles.modalButton, styles.modalButtonDanger]}>
-              <Text style={styles.modalButtonText}>Supprimer</Text>
+            <TouchableOpacity onPress={() => onSubmit(url)} style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}>
+              <Text style={styles.modalButtonText}>Valider</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -52,6 +62,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  modalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -63,13 +81,10 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: 'center',
   },
-  modalButtonDanger: {
-    backgroundColor: 'red',
-  },
   modalButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
 });
 
-export default ConfirmationModal;
+export default UrlInputModal;

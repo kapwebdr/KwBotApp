@@ -41,6 +41,18 @@ interface ImageRefineRequest {
   steps?: number;
 }
 
+interface TranslationRequest {
+  text: string;
+  from_lang: string;
+  to_lang: string;
+}
+
+interface TranslationResponse {
+  translated_text: string;
+  from: string;
+  to: string;
+}
+
 let currentSessionId: string | null = null;
 
 const updateSessionId = async (newSessionId: string) => {
@@ -86,7 +98,19 @@ export const getAvailableModels = async (): Promise<string[]> => {
   }
 };
 
-export const getImageModels = async (): Promise<string[]> => {
+// Ajout des interfaces pour les modèles d'images
+interface ImageModelInfo {
+  name: string;
+  type: 'text2image' | 'refiner';
+}
+
+interface ImageModelsResponse {
+  models: {
+    [key: string]: ImageModelInfo;
+  };
+}
+
+export const getImageModels = async (): Promise<{ id: string; name: string; type: string }[]> => {
   try {
     const response = await fetch(`${process.env.BASE_API_URL}/images/models`, {
       headers: currentSessionId ? {
@@ -99,8 +123,14 @@ export const getImageModels = async (): Promise<string[]> => {
       await updateSessionId(newSessionId);
     }
     
-    const data = await response.json();
-    return data.models;
+    const data: ImageModelsResponse = await response.json();
+    
+    // Transformer l'objet en tableau avec id, name et type
+    return Object.entries(data.models).map(([id, info]) => ({
+      id,
+      name: info.name,
+      type: info.type
+    }));
   } catch (error) {
     console.error('Erreur lors de la récupération des modèles d\'image:', error);
     return [];
@@ -450,5 +480,28 @@ export const refineImage = async (
   } catch (error) {
     console.error('Erreur lors du raffinement de l\'image:', error);
     return false;
+  }
+};
+
+export const translateText = async (params: TranslationRequest): Promise<TranslationResponse> => {
+  try {
+    const response = await fetch(`${process.env.BASE_API_URL}/translation/translate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentSessionId ? { 'x-session-id': currentSessionId } : {})
+      },
+      body: JSON.stringify(params)
+    });
+
+    const newSessionId = response.headers.get('x-session-id');
+    if (newSessionId) {
+      await updateSessionId(newSessionId);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la traduction:', error);
+    throw error;
   }
 };

@@ -1,4 +1,4 @@
-export type ToolType = 'chat' | 'image-generation' | 'image-analysis' | 'ocr' | 'image-refine';
+export type ToolType = 'chat' | 'image-generation' | 'image-analysis' | 'ocr' | 'image-refine' | 'translation';
 
 export interface ToolConfig {
   modelType?: string;
@@ -189,6 +189,36 @@ export const TOOLS: Tool[] = [
         min: 1,
         max: 50,
         step: 1
+      }
+    ]
+  },
+  { 
+    id: 'translation', 
+    label: 'Traduction', 
+    icon: 'language',
+    features: {
+      promptInput: {
+        placeholder: 'Entrez le texte à traduire...',
+        multiline: true,
+        required: true
+      }
+    },
+    defaultConfig: {
+      fromLang: 'fr',
+      toLang: 'en'
+    },
+    configFields: [
+      {
+        name: 'fromLang',
+        type: 'select',
+        label: 'Langue source',
+        options: ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'ru', 'zh', 'ja', 'ko']
+      },
+      {
+        name: 'toLang',
+        type: 'select',
+        label: 'Langue cible',
+        options: ['en', 'fr', 'es', 'de', 'it', 'pt', 'nl', 'ru', 'zh', 'ja', 'ko']
       }
     ]
   },

@@ -1,28 +1,15 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../ThemeContext';
-import { Tool, ToolType } from '../types';
-import { createStyles } from '../styles/theme.styles';
+import { useTheme } from '../contexts/ThemeContext';
+import { TOOLS } from '../types';
+import { useTool } from '../hooks/useTool';
+import { useStyles } from '../hooks/useStyles';
 
-interface ToolBarProps {
-  currentTool: ToolType;
-  isToolMenuOpen: boolean;
-  setIsToolMenuOpen: (isOpen: boolean) => void;
-  setCurrentTool: (tool: ToolType) => void;
-  tools: Tool[];
-}
-
-export const ToolBar: React.FC<ToolBarProps> = ({
-  currentTool,
-  isToolMenuOpen,
-  setIsToolMenuOpen,
-  setCurrentTool,
-  tools,
-}) => {
-  const theme = useTheme();
-  const styles = createStyles(theme);
-
+export const ToolBar: React.FC = () => {
+  const { theme } = useTheme();
+  const { currentTool, setCurrentTool, isToolMenuOpen, setIsToolMenuOpen } = useTool();
+  const styles = useStyles(currentTool);
   return (
     <View style={styles.toolSelector}>
       <TouchableOpacity
@@ -34,12 +21,12 @@ export const ToolBar: React.FC<ToolBarProps> = ({
       >
         <View style={styles.toolDropdownContent}>
           <Ionicons 
-            name={tools.find(t => t.id === currentTool)?.icon || 'apps'} 
+            name={TOOLS.find(t => t.id === currentTool)?.icon || 'apps'} 
             size={20} 
             color={theme.colors.text} 
           />
           <Text style={styles.toolDropdownText}>
-            {tools.find(t => t.id === currentTool)?.label || 'Sélectionner un outil'}
+            {TOOLS.find(t => t.id === currentTool)?.label || 'Sélectionner un outil'}
           </Text>
           <Ionicons 
             name={isToolMenuOpen ? "chevron-up" : "chevron-down"} 
@@ -50,7 +37,7 @@ export const ToolBar: React.FC<ToolBarProps> = ({
       </TouchableOpacity>
       {isToolMenuOpen && (
         <View style={styles.toolDropdownMenu}>
-          {tools.map((tool) => (
+          {TOOLS.map((tool) => (
             <TouchableOpacity
               key={tool.id}
               style={[

@@ -1,36 +1,24 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTheme } from '../ThemeContext';
-import { ToolType, TOOLS } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
 import { ToolConfigComponent } from './ToolConfig';
+import { useTool } from '../hooks/useTool';
 
-interface ToolOptionsBarProps {
-  currentTool: ToolType;
-  config: any;
-  onConfigChange: (config: any) => void;
-}
+export const ToolOptionsBar: React.FC = () => {
+  const { theme } = useTheme();
+  const { tool, toolConfig, updateToolConfig } = useTool();
+  const styles = createStyles(theme);
 
-export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
-  currentTool,
-  config,
-  onConfigChange,
-}) => {
-  const theme = useTheme();
-  const styles = createStyles(theme, currentTool);
-  const currentToolConfig = TOOLS.find(tool => tool.id === currentTool);
-
-  if (!currentToolConfig?.configFields) return null;
+  if (!tool?.configFields) return null;
 
   return (
     <View style={styles.toolOptionsBar}>
       <ToolConfigComponent
-        tool={currentToolConfig}
-        config={config}
-        onConfigChange={onConfigChange}
+        tool={tool}
+        config={toolConfig}
+        onConfigChange={updateToolConfig}
       />
     </View>
   );
-};
-
-export default ToolOptionsBar; 
+}; 

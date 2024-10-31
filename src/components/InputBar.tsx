@@ -1,43 +1,32 @@
 import React from 'react';
 import { View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
-import { TOOLS } from '../types';
 import { FileUploadConfig } from './FileUploadConfig';
+import { useTool } from '../hooks/useTool';
 
-interface InputBarProps {
-  input?: string;
-  setInput?: (text: string) => void;
-  isGenerating: boolean;
-  handleSend: () => void;
-  handleStop: () => void;
-  handleFileUpload?: () => void;
-  handleUrlInput?: () => void;
-  pendingFile?: { name: string } | null;
-  setPendingFile?: (file: null) => void;
-  currentTool: string;
-}
+export const InputBar: React.FC = () => {
+  const { theme } = useTheme();
+  const { 
+    tool,
+    handleToolAction,
+    isFeatureEnabled,
+    getToolFeatures,
+    input,
+    setInput,
+    isGenerating
+  } = useTool();
+  
+  const styles = createStyles({ theme });
+  const features = getToolFeatures();
 
-export const InputBar: React.FC<InputBarProps> = ({
-  input = '',
-  setInput = () => {},
-  isGenerating,
-  handleSend,
-  handleStop,
-  handleFileUpload,
-  handleUrlInput,
-  pendingFile,
-  setPendingFile,
-  currentTool,
-}) => {
-  const theme = useTheme();
-  const styles = createStyles(theme);
-  const tool = TOOLS.find(t => t.id === currentTool);
-
-  const showInput = tool?.features?.promptInput;
-  const showFileUpload = tool?.features?.fileUpload;
-  const showUrlInput = tool?.features?.urlInput;
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleToolAction('send');
+    }
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -45,27 +34,22 @@ export const InputBar: React.FC<InputBarProps> = ({
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 60}
       style={[styles.inputContainer, { backgroundColor: theme.colors.background }]}
     >
-      {(showFileUpload || showUrlInput) && handleFileUpload && handleUrlInput && setPendingFile && (
-        
+      {(isFeatureEnabled('fileUpload') || isFeatureEnabled('urlInput')) && (
         <FileUploadConfig
-          handleFileUpload={handleFileUpload}
-          handleUrlInput={handleUrlInput}
-          pendingFile={pendingFile}
-          setPendingFile={setPendingFile}
+          onFileUpload={() => handleToolAction('upload')}
+          onUrlInput={() => handleToolAction('url')}
         />
       )}
 
-      {showInput && (
+      {isFeatureEnabled('promptInput') && (
         <TextInput
-          style={[
-            styles.input,
-            isGenerating && styles.inputDisabled
-          ]}
+          style={[styles.input, isGenerating && styles.inputDisabled]}
           value={input}
           onChangeText={setInput}
-          placeholder={tool.features?.promptInput?.placeholder || "Tapez votre message..."}
+          onKeyPress={handleKeyPress}
+          placeholder={features.promptInput?.placeholder || "Tapez votre message..."}
           placeholderTextColor="#999"
-          multiline={tool.features?.promptInput?.multiline}
+          multiline={features.promptInput?.multiline}
           editable={!isGenerating}
         />
       )}
@@ -73,7 +57,7 @@ export const InputBar: React.FC<InputBarProps> = ({
       {isGenerating ? (
         <TouchableOpacity 
           style={[styles.sendButton, styles.stopButton]}
-          onPress={handleStop}
+          onPress={() => handleToolAction('stop')}
         >
           <Ionicons 
             name="stop" 
@@ -83,17 +67,14 @@ export const InputBar: React.FC<InputBarProps> = ({
         </TouchableOpacity>
       ) : (
         <TouchableOpacity 
-          style={[
-            styles.sendButton,
-            (!showInput || (!input.trim() && !pendingFile) || isGenerating) && styles.sendButtonDisabled
-          ]}
-          onPress={handleSend} 
-          disabled={!showInput || (!input.trim() && !pendingFile) || isGenerating}
+          style={[styles.sendButton, (!input.trim() || isGenerating) && styles.sendButtonDisabled]}
+          onPress={() => handleToolAction('send')}
+          disabled={!input.trim() || isGenerating}
         >
           <Ionicons 
             name="send" 
             size={24} 
-            color={!showInput || (!input.trim() && !pendingFile) || isGenerating ? "#999" : theme.colors.primary} 
+            color={!input.trim() || isGenerating ? "#999" : theme.colors.primary}
           />
         </TouchableOpacity>
       )}

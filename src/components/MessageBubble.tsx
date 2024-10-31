@@ -1,8 +1,13 @@
-import * as React from 'react';
-import { View, Text, Image } from 'react-native';
-import { useTheme } from '../ThemeContext';
+import React from 'react';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { Message } from '../types';
 import { createStyles } from '../styles/theme.styles';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Clipboard from '@react-native-clipboard/clipboard';
+import { Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface MessageBubbleProps {
   message: Message;
@@ -10,7 +15,6 @@ interface MessageBubbleProps {
   loadingProgress: number;
   dots: string;
   isWaitingFirstResponse: boolean;
-  renderCodeBlock: (code: string, language: string) => React.ReactNode;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -19,10 +23,30 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   loadingProgress,
   dots,
   isWaitingFirstResponse,
-  renderCodeBlock,
 }) => {
-  const theme = useTheme();
-  const styles = createStyles(theme);
+  const { theme } = useTheme();
+  const styles = createStyles({ theme });
+
+  const renderCodeBlock = (code: string, language: string) => (
+    <View style={styles.codeBlockContainer}>
+      <SyntaxHighlighter
+        language={language}
+        style={tomorrow}
+        customStyle={styles.codeBlock}
+      >
+        {code}
+      </SyntaxHighlighter>
+      <TouchableOpacity
+        style={styles.copyButton}
+        onPress={() => {
+          Clipboard.setString(code);
+          Alert.alert('Copié', 'Le code a été copié dans le presse-papiers');
+        }}
+      >
+        <Ionicons name="copy-outline" size={24} color={theme.colors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
 
   // Vérifier si le contenu est une image base64
   const imageMatch = message.content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[^)]+)\)/);
@@ -91,4 +115,4 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   );
 };
 
-export default MessageBubble; 
+export default MessageBubble;

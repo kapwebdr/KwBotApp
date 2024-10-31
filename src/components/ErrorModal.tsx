@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
-import { useTheme } from '../ThemeContext';
+import { Modal, View, Text, TouchableOpacity } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
 
 interface ErrorModalProps {
@@ -14,7 +14,7 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
   onRetry,
   message,
 }) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const styles = createStyles(theme);
 
   if (!isVisible) return null;
