@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View, TouchableOpacity, Animated, TouchableWithoutFeedback } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorModal from './components/ErrorModal';
-import { ToolBar } from './components/ToolBar';
 import Messages from './components/Messages';
 import { Tool } from './components/Tool';
 import { createStyles } from './styles/theme.styles';
@@ -10,6 +10,7 @@ import { Sidebar } from './components/Sidebar';
 import { ConversationProvider } from './contexts/ConversationContext';
 import { ToolProvider } from './contexts/ToolContext';
 import { useTheme } from './contexts/ThemeContext';
+import { BottomTabNavigator } from './navigation/BottomTabNavigator';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -68,51 +69,54 @@ const ChatBot: React.FC = () => {
   const styles = createStyles({ theme });
 
   return (
-    <ConversationProvider>
-      <ToolProvider>
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-          <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity onPress={toggleSidebar}>
-              <Ionicons name="menu" size={24} color={theme.colors.primary} />
-            </TouchableOpacity>
-            
-            <View style={styles.headerContent}>
-              <ToolBar />
+    <NavigationContainer>
+      <ConversationProvider>
+        <ToolProvider>
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={toggleSidebar}>
+                <Ionicons name="menu" size={24} color={theme.colors.primary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={toggleTheme}>
+                <Ionicons 
+                  name={isDark ? "sunny" : "moon"} 
+                  size={24} 
+                  color={theme.colors.primary} 
+                />
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity onPress={toggleTheme}>
-              <Ionicons 
-                name={isDark ? "sunny" : "moon"} 
-                size={24} 
-                color={theme.colors.primary} 
-              />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.mainContent}>
+              <Messages />
+              <View style={styles.bottomContainer}>
+                <Tool />
+                <BottomTabNavigator />
+              </View>
+            </View>
 
-          <Messages />
-          <Tool />
+            {isSidebarOpen && (
+              <TouchableWithoutFeedback onPress={closeSidebar}>
+                <View style={styles.sidebarOverlay} />
+              </TouchableWithoutFeedback>
+            )}
 
-          {isSidebarOpen && (
-            <TouchableWithoutFeedback onPress={closeSidebar}>
-              <View style={styles.sidebarOverlay} />
-            </TouchableWithoutFeedback>
-          )}
-
-          <Sidebar
-            isOpen={isSidebarOpen}
-            sidebarAnimation={sidebarAnimation}
-          />
-
-          {!isApiAvailable && (
-            <ErrorModal
-              isVisible={true}
-              onRetry={handleRetryConnection}
-              message={apiErrorMessage}
+            <Sidebar
+              isOpen={isSidebarOpen}
+              sidebarAnimation={sidebarAnimation}
             />
-          )}
-        </View>
-      </ToolProvider>
-    </ConversationProvider>
+
+            {!isApiAvailable && (
+              <ErrorModal
+                isVisible={true}
+                onRetry={handleRetryConnection}
+                message={apiErrorMessage}
+              />
+            )}
+          </View>
+        </ToolProvider>
+      </ConversationProvider>
+    </NavigationContainer>
   );
 };
 

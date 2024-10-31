@@ -10,7 +10,7 @@ export const Messages: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const { messages } = useConversation();
-  const { isGenerating } = useTool();
+  const { isGenerating, tool } = useTool();
   const flatListRef = useRef<FlatList>(null);
   
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
@@ -19,13 +19,34 @@ export const Messages: React.FC = () => {
 
   const scrollToBottom = () => {
     if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
+      try {
+        flatListRef.current.scrollToEnd({ animated: false });
+        setTimeout(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        }, 50);
+      } catch (error) {
+        console.error('Erreur lors du scroll:', error);
+      }
     }
   };
 
   useEffect(() => {
+    const timer = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (isGenerating) {
+      const interval = setInterval(scrollToBottom, 500);
+      return () => clearInterval(interval);
+    }
+  }, [isGenerating]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -40,7 +61,14 @@ export const Messages: React.FC = () => {
   }, [isWaitingFirstResponse]);
 
   return (
-    <View style={styles.contentContainer}>
+    <View style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      height: '100%',
+      paddingBottom: tool?.configFields ? 200 : 80, // Ajustement dynamique selon la présence de configFields
+    }}>
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -54,13 +82,29 @@ export const Messages: React.FC = () => {
             isWaitingFirstResponse={isWaitingFirstResponse}
           />
         )}
-        style={styles.messageList}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+        }}
+        contentContainerStyle={{
+          padding: 10,
+          flexGrow: 1,
+        }}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 10,
         }}
+        removeClippedSubviews={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={21}
+        updateCellsBatchingPeriod={50}
+        onEndReachedThreshold={0.5}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={scrollToBottom}
+        ListEmptyComponent={null}
       />
     </View>
   );

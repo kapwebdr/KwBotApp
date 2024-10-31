@@ -32,27 +32,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
       : message;
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnimation }] }]}>
-      <TouchableOpacity style={styles.newConversationButton} onPress={startNewConversation}>
-        <Text style={styles.newConversationButtonText}>Nouvelle conversation</Text>
+    <View style={[
+      styles.sidebar,
+      {
+        position: 'absolute',
+        top: 60,
+        left: 0,
+        bottom: 0,
+        width: 250,
+        backgroundColor: theme.colors.background,
+        borderRightWidth: 1,
+        borderRightColor: theme.colors.border,
+        transform: [{ translateX: sidebarAnimation }],
+        zIndex: 1000,
+      }
+    ]}>
+      <TouchableOpacity 
+        style={[
+          styles.newConversationButton,
+          { backgroundColor: theme.colors.primary }
+        ]} 
+        onPress={startNewConversation}
+      >
+        <Text style={[styles.newConversationButtonText, { color: theme.colors.background }]}>
+          Nouvelle conversation
+        </Text>
       </TouchableOpacity>
+      
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.conversationItemContainer}>
+          <View style={[
+            styles.conversationItemContainer,
+            { borderBottomColor: theme.colors.border }
+          ]}>
             <TouchableOpacity
               style={[
                 styles.conversationItem,
-                currentConversationId === item.id && styles.conversationItemActive
+                currentConversationId === item.id && { backgroundColor: theme.colors.gray100 }
               ]}
               onPress={() => loadConversation(item.id)}
             >
-              <Text style={styles.conversationTimestamp}>
+              <Text style={[styles.conversationTimestamp, { color: theme.colors.text }]}>
                 {new Date(item.timestamp).toLocaleString()}
               </Text>
-              <Text style={styles.conversationPreview}>
+              <Text style={[styles.conversationPreview, { color: theme.colors.text }]}>
                 {item.messages.length > 0
                   ? truncateMessage(item.messages[0].content)
                   : 'Nouvelle conversation'}
@@ -67,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </View>
         )}
       />
-    </Animated.View>
+    </View>
   );
 };
 

@@ -15,14 +15,27 @@ export const InputBar: React.FC = () => {
     getToolFeatures,
     input,
     setInput,
-    isGenerating
+    isGenerating,
+    isModelLoaded,
+    isModelLoading,
+    modelLoadingStatus,
+    toolConfig
   } = useTool();
   
   const styles = createStyles({ theme });
   const features = getToolFeatures();
 
+  const isInputDisabled = !toolConfig.model || !isModelLoaded || isModelLoading || isGenerating;
+  const placeholderText = !toolConfig.model 
+    ? "Veuillez sélectionner un modèle..."
+    : isModelLoading 
+      ? modelLoadingStatus 
+      : !isModelLoaded 
+        ? "Veuillez attendre le chargement du modèle..." 
+        : features.promptInput?.placeholder || "Tapez votre message...";
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isInputDisabled) {
       e.preventDefault();
       handleToolAction('send');
     }
@@ -43,14 +56,14 @@ export const InputBar: React.FC = () => {
 
       {isFeatureEnabled('promptInput') && (
         <TextInput
-          style={[styles.input, isGenerating && styles.inputDisabled]}
+          style={[styles.input, isInputDisabled && styles.inputDisabled]}
           value={input}
           onChangeText={setInput}
           onKeyPress={handleKeyPress}
-          placeholder={features.promptInput?.placeholder || "Tapez votre message..."}
+          placeholder={placeholderText}
           placeholderTextColor="#999"
           multiline={features.promptInput?.multiline}
-          editable={!isGenerating}
+          editable={!isInputDisabled}
         />
       )}
 
@@ -67,14 +80,17 @@ export const InputBar: React.FC = () => {
         </TouchableOpacity>
       ) : (
         <TouchableOpacity 
-          style={[styles.sendButton, (!input.trim() || isGenerating) && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton, 
+            (!input.trim() || isInputDisabled) && styles.sendButtonDisabled
+          ]}
           onPress={() => handleToolAction('send')}
-          disabled={!input.trim() || isGenerating}
+          disabled={!input.trim() || isInputDisabled}
         >
           <Ionicons 
             name="send" 
             size={24} 
-            color={!input.trim() || isGenerating ? "#999" : theme.colors.primary}
+            color={!input.trim() || isInputDisabled ? "#999" : theme.colors.primary}
           />
         </TouchableOpacity>
       )}

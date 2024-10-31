@@ -12,9 +12,10 @@ interface ConversationContextType {
   deleteConversation: (id: string) => void;
   startNewConversation: () => void;
   updateSystemMessage: (message: string) => void;
+  saveCurrentConversation: () => void;
 }
 
-const ConversationContext = createContext<ConversationContextType | null>(null);
+export const ConversationContext = createContext<ConversationContextType | null>(null);
 
 export const useConversation = () => {
   const context = useContext(ConversationContext);
@@ -30,6 +31,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [systemMessage, setSystemMessage] = useState<string>("Vous êtes un assistant IA utile.");
 
+  // Charger les conversations au démarrage
   useEffect(() => {
     const loadInitialConversations = async () => {
       const loadedConversations = await conversationService.loadConversations();
@@ -46,6 +48,20 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
     loadInitialConversations();
   }, []);
+
+  // Sauvegarder automatiquement quand les messages changent
+  useEffect(() => {
+    if (currentConversationId && messages.length > 0) {
+      const updatedConversations = conversationService.updateConversation(
+        conversations,
+        currentConversationId,
+        messages,
+        systemMessage
+      );
+      setConversations(updatedConversations);
+      conversationService.saveConversations(updatedConversations);
+    }
+  }, [messages, currentConversationId, systemMessage]);
 
   const loadConversation = (conversationId: string) => {
     const conversation = conversations.find(conv => conv.id === conversationId);
@@ -93,6 +109,19 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  const saveCurrentConversation = async () => {
+    if (currentConversationId) {
+      const updatedConversations = conversationService.updateConversation(
+        conversations,
+        currentConversationId,
+        messages,
+        systemMessage
+      );
+      setConversations(updatedConversations);
+      await conversationService.saveConversations(updatedConversations);
+    }
+  };
+
   const value = {
     messages,
     setMessages,
@@ -103,6 +132,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     deleteConversation,
     startNewConversation,
     updateSystemMessage,
+    saveCurrentConversation,
   };
 
   return (

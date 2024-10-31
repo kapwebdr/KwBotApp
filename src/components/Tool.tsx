@@ -10,11 +10,21 @@ export const Tool: React.FC = () => {
   const styles = createStyles({ theme });
   const { tool, toolConfig, updateToolConfig } = useTool();
 
-  // Si l'outil n'est pas encore chargé, on ne rend rien
   if (!tool) return null;
 
   return (
-    <View style={styles.toolContainer}>
+    <View style={[
+      styles.toolContainer,
+      {
+        position: 'absolute',
+        bottom: 70, // Hauteur de la bottom bar
+        left: 0,
+        right: 0,
+        backgroundColor: theme.colors.background,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.border,
+      }
+    ]}>
       <ToolConfigComponent
         tool={tool}
         config={toolConfig}

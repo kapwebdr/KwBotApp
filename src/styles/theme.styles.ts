@@ -6,18 +6,18 @@ import { TOOLS } from '../types';
 export const createStyles = (themeContext: { theme: Theme }, currentTool?: string) => {
   const theme = themeContext?.theme || lightTheme;
   
-  const bottomOffset = currentTool && TOOLS.find(t => t.id === currentTool)?.features?.promptInput ? 60 : 0;
+  // Calculer le bottomOffset en fonction du tool actuel
+  const bottomOffset = 56; // Hauteur fixe de la bottom bar
   
   return StyleSheet.create({
-    // Tous les styles de ChatBot.tsx qui dépendent du thème
     container: {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
-      position: 'relative',
-      overflow: 'hidden',
+      backgroundColor: theme.colors.background,
     },
+
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -25,10 +25,48 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       padding: 10,
       height: 60,
       backgroundColor: theme.colors.background,
-      borderBottomColor: theme.colors.border,
       borderBottomWidth: 1,
-      zIndex: 10,
+      borderBottomColor: theme.colors.border,
     },
+
+    mainContent: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    },
+
+    contentContainer: {
+      flex: 1,
+      overflow: 'auto',
+    },
+
+    messageList: {
+      padding: 10,
+      flexGrow: 1,
+    },
+
+    toolContainer: {
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+
+    toolConfigContent: {
+      padding: 10,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+    },
+
+    bottomNavigation: {
+      height: 80,
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+
+    // Tous les styles de ChatBot.tsx qui dépendent du thème
     headerContent: {
       flex: 1,
       flexDirection: 'row',
@@ -72,22 +110,6 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     modalButtonText: {
       color: 'white',
       fontWeight: 'bold',
-    },
-    toolContainer: {
-      width: '100%',
-      padding: 10,
-      backgroundColor: theme.colors.background,
-    },
-    sidebar: {
-      position: 'absolute',
-      top: 60,
-      left: 0,
-      bottom: 0,
-      width: 250,
-      backgroundColor: theme.colors.background,
-      borderRightWidth: 1,
-      borderRightColor: theme.colors.border,
-      zIndex: 1000,
     },
     newConversationButton: {
       padding: 10,
@@ -264,27 +286,16 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     },
     
     // Styles pour ToolConfig
-    toolConfigContainer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: theme.colors.background,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
-    },
-    toolConfigContent: {
-      padding: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-    },
     configFields: {
       display: 'flex',
-      flexDirection: 'column',
-      gap: 8,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginBottom: 10,
     },
     configField: {
+      flex: 1,
+      minWidth: 200,
       marginBottom: 8,
     },
     configLabel: {
@@ -331,10 +342,13 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     
     // Styles pour les états désactivés
     inputDisabled: {
-      opacity: 0.7,
+      opacity: 0.5,
+      backgroundColor: theme.colors.gray100,
+      color: theme.colors.gray400,
     },
     sendButtonDisabled: {
-      opacity: 0.7,
+      opacity: 0.5,
+      backgroundColor: theme.colors.gray100,
     },
     stopButton: {
       backgroundColor: 'rgba(255, 0, 0, 0.1)',
@@ -368,7 +382,8 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     },
     modelSelectDisabled: {
       opacity: 0.5,
-      cursor: 'wait',
+      backgroundColor: theme.colors.gray100,
+      color: theme.colors.gray400,
     },
     modelSelectIcon: {
       position: 'absolute',
@@ -440,11 +455,6 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       borderColor: theme.colors.border,
       marginBottom: 10,
     },
-    contentContainer: {
-      flex: 1,
-      overflow: 'auto',
-      paddingBottom: 20,
-    },
     codeBlockContainer: {
       position: 'relative',
       width: '100%',
@@ -472,9 +482,6 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       backgroundColor: theme.colors.primary,
       borderRadius: 2,
     },
-    messageList: {
-      padding: 10,
-    },
     uploadButtons: {
       flexDirection: 'row',
       gap: 10,
@@ -498,6 +505,12 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       paddingVertical: 8,
       paddingHorizontal: 8,
       fontSize: 14,
+      '&:disabled': {
+        opacity: 0.5,
+        backgroundColor: theme.colors.gray100,
+        color: theme.colors.gray400,
+        cursor: 'not-allowed',
+      },
     },
     selectContainer: {
       position: 'relative',
@@ -519,13 +532,16 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       cursor: 'wait',
     },
     configRow: {
+      display: 'flex',
       flexDirection: 'row',
-      gap: '10px',
-      alignItems: 'center',
-      marginBottom: '10px',
+      flexWrap: 'wrap',
+      gap: 10,
+      width: '100%',
     },
-    configField: {
+    configColumn: {
       flex: 1,
+      minWidth: 200,
+      marginBottom: 8,
     },
     textInput: {
       backgroundColor: theme.colors.inputBackground,
@@ -535,6 +551,56 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       fontSize: 14,
       width: '100%',
       minHeight: 36,
+    },
+    // Styles pour le texte désactivé
+    textDisabled: {
+      color: theme.colors.gray400,
+    },
+    // Styles pour les placeholders désactivés
+    placeholderDisabled: {
+      color: theme.colors.gray300,
+    },
+    toolDropdownButtonDisabled: {
+      opacity: 0.5,
+      backgroundColor: theme.colors.gray100,
+    },
+    // Styles pour la bottom bar
+    bottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 56,
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      zIndex: 10,
+    },
+    bottomBarItem: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 5,
+    },
+    bottomBarLabel: {
+      fontSize: 12,
+      marginTop: 4,
+      textAlign: 'center',
+    },
+    bottomBarLabelActive: {
+      fontWeight: 'bold',
+    },
+    bottomContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
     },
   });
 };

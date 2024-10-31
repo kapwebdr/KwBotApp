@@ -10,7 +10,8 @@ import {
   extractTextFromImage,
   refineImage,
   translateText,
-  getImageModels
+  getImageModels,
+  loadModel
 } from '../services/api';
 import { useConversation } from './ConversationContext';
 
@@ -28,6 +29,11 @@ interface ToolContextType {
   setInput: (input: string) => void;
   availableModels: string[];
   selectConfigs: Record<string, any>;
+  isModelLoading: boolean;
+  modelLoadingProgress: number;
+  modelLoadingStatus: string;
+  loadSelectedModel: (modelName: string) => Promise<void>;
+  isModelLoaded: boolean;
 }
 
 export const ToolContext = createContext<ToolContextType | null>(null);
@@ -47,6 +53,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [imageModels, setImageModels] = useState<ImageModel[]>([]);
+  const [isModelLoading, setIsModelLoading] = useState(false);
+  const [modelLoadingProgress, setModelLoadingProgress] = useState(0);
+  const [modelLoadingStatus, setModelLoadingStatus] = useState('');
+  const [currentLoadedModel, setCurrentLoadedModel] = useState<string | null>(null);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
 
   const { messages, setMessages, systemMessage } = useConversation();
 
@@ -82,7 +93,12 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Available image models:', imgModels);
         console.groupEnd();
         
-        setToolConfig(tool.defaultConfig || {});
+        const defaultConfig = {
+          ...tool.defaultConfig,
+          modelType: tool.id === 'image-generation' ? (imgModels[0]?.id || 'sdxl/turbo') : undefined
+        };
+        
+        setToolConfig(defaultConfig);
       }
     };
 
@@ -131,8 +147,66 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
+  // Réinitialiser isModelLoaded quand on change d'outil
+  useEffect(() => {
+    setIsModelLoaded(false);
+    setCurrentLoadedModel(null);
+  }, [currentTool]);
+
+  const loadSelectedModel = async (modelName: string) => {
+    if (currentLoadedModel === modelName) return;
+    
+    setIsModelLoaded(false);
+    setIsModelLoading(true);
+    setModelLoadingProgress(0);
+    setModelLoadingStatus('Chargement du modèle...');
+
+    try {
+      const success = await loadModel(
+        modelName,
+        (progress) => {
+          setModelLoadingProgress(progress);
+        },
+        (status) => {
+          setModelLoadingStatus(status);
+          if (status === 'loaded') {
+            setIsModelLoaded(true);
+          }
+        }
+      );
+
+      if (success) {
+        setCurrentLoadedModel(modelName);
+        updateToolConfig({ model: modelName });
+      } else {
+        setModelLoadingStatus('Échec du chargement du modèle');
+        updateToolConfig({ model: undefined });
+        setIsModelLoaded(false);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du modèle:', error);
+      setModelLoadingStatus('Erreur lors du chargement du modèle');
+      updateToolConfig({ model: undefined });
+      setIsModelLoaded(false);
+    } finally {
+      setIsModelLoading(false);
+    }
+  };
+
   const handleChatAction = async () => {
     if (!input.trim() || isGenerating) return;
+    if (!toolConfig.model) {
+      console.error('Aucun modèle sélectionné');
+      return;
+    }
+    if (isModelLoading) {
+      console.error('Le modèle est en cours de chargement');
+      return;
+    }
+    if (!isModelLoaded) {
+      console.error('Le modèle n\'est pas encore chargé');
+      return;
+    }
 
     const newMessages = [
       ...messages,
@@ -151,7 +225,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsWaitingFirstResponse(true);
 
       await streamChatCompletion(
-        toolConfig.model || 'default-model',
+        toolConfig.model || availableModels[0],
         newMessages,
         systemMessage,
         (chunk) => {
@@ -175,9 +249,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       setIsGenerating(true);
+      const defaultImageModel = imageModels.find(m => m.type === 'text2image')?.id || 'sdxl/turbo';
+      
       await generateImage(
         {
-          model_type: toolConfig.modelType || 'sdxl-turbo',
+          model_type: toolConfig.modelType || defaultImageModel,
           prompt: input,
           width: toolConfig.width || 1024,
           height: toolConfig.height || 1024,
@@ -385,6 +461,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setInput,
     availableModels,
     selectConfigs,
+    isModelLoading,
+    modelLoadingProgress,
+    modelLoadingStatus,
+    loadSelectedModel,
+    isModelLoaded,
   };
 
   return (
