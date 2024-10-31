@@ -58,6 +58,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [modelLoadingStatus, setModelLoadingStatus] = useState('');
   const [currentLoadedModel, setCurrentLoadedModel] = useState<string | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [loadedModels, setLoadedModels] = useState<Record<string, string>>({});
+  const [modelStates, setModelStates] = useState<Record<string, {
+    model: string | undefined;
+    isLoaded: boolean;
+  }>>({});
 
   const { messages, setMessages, systemMessage } = useConversation();
 
@@ -147,14 +152,44 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  // Réinitialiser isModelLoaded quand on change d'outil
+  // Mise à jour du modèle chargé quand on change d'outil
   useEffect(() => {
-    setIsModelLoaded(false);
-    setCurrentLoadedModel(null);
+    const savedState = modelStates[currentTool];
+    if (savedState) {
+      setToolConfig(prev => ({
+        ...prev,
+        model: savedState.model
+      }));
+      setIsModelLoaded(savedState.isLoaded);
+      setCurrentLoadedModel(savedState.model || null);
+    } else {
+      // Réinitialiser si pas d'état sauvegardé pour cet outil
+      setIsModelLoaded(false);
+      setCurrentLoadedModel(null);
+    }
   }, [currentTool]);
 
+  // Sauvegarder l'état du modèle quand il change
+  useEffect(() => {
+    if (currentTool) {
+      setModelStates(prev => ({
+        ...prev,
+        [currentTool]: {
+          model: toolConfig.model,
+          isLoaded: isModelLoaded
+        }
+      }));
+    }
+  }, [currentTool, toolConfig.model, isModelLoaded]);
+
   const loadSelectedModel = async (modelName: string) => {
-    if (currentLoadedModel === modelName) return;
+    // Si le modèle est déjà chargé pour cet outil, pas besoin de le recharger
+    if (loadedModels[currentTool] === modelName) {
+      setIsModelLoaded(true);
+      setCurrentLoadedModel(modelName);
+      updateToolConfig({ model: modelName });
+      return;
+    }
     
     setIsModelLoaded(false);
     setIsModelLoading(true);
@@ -171,6 +206,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setModelLoadingStatus(status);
           if (status === 'loaded') {
             setIsModelLoaded(true);
+            // Sauvegarder le modèle chargé pour cet outil
+            setLoadedModels(prev => ({
+              ...prev,
+              [currentTool]: modelName
+            }));
           }
         }
       );

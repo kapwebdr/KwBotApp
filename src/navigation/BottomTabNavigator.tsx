@@ -54,7 +54,7 @@ export const BottomTabNavigator = () => {
       </View>
     );
   };
-
+  
   return (
     <Tab.Navigator
       screenOptions={{

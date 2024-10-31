@@ -602,6 +602,33 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       borderTopWidth: 1,
       borderTopColor: theme.colors.border,
     },
+    systemStatus: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      padding: 4,
+      borderRadius: 4,
+      backgroundColor: theme.colors.gray100,
+    },
+    statusIcon: {
+      marginRight: 4,
+    },
+    statusText: {
+      fontSize: 12,
+      fontFamily: 'monospace',
+    },
+    voiceButton: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.colors.inputBackground,
+      marginRight: 8,
+    },
+    voiceButtonActive: {
+      backgroundColor: `${theme.colors.primary}20`,
+    },
   });
 };
 

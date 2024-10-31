@@ -1,11 +1,11 @@
-import React, { useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Tool, ToolConfig as IToolConfig } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles, getSelectStyle } from '../styles/theme.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { useTool } from '../hooks/useTool';
-import { InputBar } from './InputBar';
+import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
 
 interface ToolConfigComponentProps {
   tool: Tool;
@@ -32,6 +32,8 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
     modelLoadingStatus,
     loadSelectedModel
   } = useTool();
+  const [isListening, setIsListening] = useState(false);
+  const speechRecognition = useRef<SpeechRecognition | null>(null);
 
   const handleConfigChange = (name: string, value: any) => {
     onConfigChange({
@@ -178,6 +180,83 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
     ));
   };
 
+  // Initialisation de la reconnaissance vocale
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Web Speech API
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        speechRecognition.current = new SpeechRecognition();
+        speechRecognition.current.continuous = false;
+        speechRecognition.current.interimResults = false;
+        speechRecognition.current.lang = 'fr-FR';
+
+        speechRecognition.current.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          setInput(transcript);
+          setIsListening(false);
+        };
+
+        speechRecognition.current.onerror = (event) => {
+          console.error('Erreur de reconnaissance vocale:', event.error);
+          setIsListening(false);
+        };
+
+        speechRecognition.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    } else {
+      // React Native Voice
+      Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+        if (e.value) {
+          setInput(e.value[0]);
+        }
+        setIsListening(false);
+      };
+
+      Voice.onSpeechError = (e) => {
+        console.error('Erreur de reconnaissance vocale:', e);
+        setIsListening(false);
+      };
+
+      return () => {
+        Voice.destroy().then(Voice.removeAllListeners);
+      };
+    }
+  }, []);
+
+  const startVoiceRecognition = async () => {
+    try {
+      setIsListening(true);
+      if (Platform.OS === 'web') {
+        if (speechRecognition.current) {
+          speechRecognition.current.start();
+        }
+      } else {
+        await Voice.start('fr-FR');
+      }
+    } catch (error) {
+      console.error('Erreur lors du démarrage de la reconnaissance vocale:', error);
+      setIsListening(false);
+    }
+  };
+
+  const stopVoiceRecognition = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        if (speechRecognition.current) {
+          speechRecognition.current.stop();
+        }
+      } else {
+        await Voice.stop();
+      }
+      setIsListening(false);
+    } catch (error) {
+      console.error('Erreur lors de l\'arrêt de la reconnaissance vocale:', error);
+    }
+  };
+
   if (!tool.configFields && !hasPromptInput && !hasFileUpload && !hasUrlInput) {
     return null;
   }
@@ -242,6 +321,21 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
                 multiline={tool.features?.promptInput?.multiline}
                 editable={!isGenerating}
               />
+              <TouchableOpacity 
+                style={[
+                  styles.voiceButton,
+                  isListening && styles.voiceButtonActive
+                ]}
+                onPress={isListening ? stopVoiceRecognition : startVoiceRecognition}
+                disabled={isGenerating}
+              >
+                <Ionicons 
+                  name={isListening ? "mic" : "mic-outline"} 
+                  size={24} 
+                  color={isGenerating ? "#999" : theme.colors.primary}
+                />
+              </TouchableOpacity>
+
               {isGenerating ? (
                 <TouchableOpacity 
                   style={[styles.sendButton, styles.stopButton]}
@@ -255,7 +349,10 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity 
-                  style={[styles.sendButton, (!input.trim() || isGenerating) && styles.sendButtonDisabled]}
+                  style={[
+                    styles.sendButton, 
+                    (!input.trim() || isGenerating) && styles.sendButtonDisabled
+                  ]}
                   onPress={handleSend}
                   disabled={!input.trim() || isGenerating}
                 >

@@ -67,7 +67,7 @@ export const Messages: React.FC = () => {
       flexDirection: 'column',
       overflow: 'hidden',
       height: '100%',
-      paddingBottom: tool?.configFields ? 200 : 80, // Ajustement dynamique selon la présence de configFields
+      paddingBottom: tool?.configFields ? 230 : 90, // Ajustement dynamique selon la présence de configFields
     }}>
       <FlatList
         ref={flatListRef}

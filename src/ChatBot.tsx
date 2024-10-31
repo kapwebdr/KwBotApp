@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Animated, TouchableWithoutFeedback } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import { ConversationProvider } from './contexts/ConversationContext';
 import { ToolProvider } from './contexts/ToolContext';
 import { useTheme } from './contexts/ThemeContext';
 import { BottomTabNavigator } from './navigation/BottomTabNavigator';
+import { SystemWebSocket, SystemMetrics } from './services/websocket';
+import { SystemStatus } from './components/SystemStatus';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -20,6 +22,24 @@ const ChatBot: React.FC = () => {
   const [isApiAvailable, setIsApiAvailable] = useState(true);
   const [apiErrorMessage, setApiErrorMessage] = useState('');
   const { theme, toggleTheme, isDark } = useTheme();
+  const [systemStatus, setSystemStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
+  const wsRef = useRef<SystemWebSocket | null>(null);
+
+  useEffect(() => {
+    wsRef.current = new SystemWebSocket(
+      (metrics) => setSystemMetrics(metrics),
+      (status) => {
+        setSystemStatus(status);
+        setIsApiAvailable(status === 'connected');
+      }
+    );
+    wsRef.current.connect();
+
+    return () => {
+      wsRef.current?.disconnect();
+    };
+  }, []);
 
   const toggleSidebar = () => {
     if (isSidebarOpen) {
@@ -77,6 +97,8 @@ const ChatBot: React.FC = () => {
               <TouchableOpacity onPress={toggleSidebar}>
                 <Ionicons name="menu" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
+
+              <SystemStatus status={systemStatus} metrics={systemMetrics} />
 
               <TouchableOpacity onPress={toggleTheme}>
                 <Ionicons 
