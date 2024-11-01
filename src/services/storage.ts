@@ -76,6 +76,7 @@ export class StorageService<T> {
 export const storageKeys = {
   TOOL_CONFIGS: 'tool_configs',
   CONVERSATIONS: 'conversations',
+  CURRENT_CONVERSATION: 'current_conversation',
   THEME: 'app_theme',
   SESSION: 'session_id'
 } as const;
@@ -97,5 +98,10 @@ export const themeStorage = new StorageService<'light' | 'dark'>(
 
 export const sessionStorage = new StorageService<string | null>(
   storageKeys.SESSION,
+  null
+);
+
+export const currentConversationStorage = new StorageService<string | null>(
+  storageKeys.CURRENT_CONVERSATION,
   null
 ); 

@@ -1,11 +1,15 @@
 import uuid from 'react-native-uuid';
 import { Conversation, Message } from '../types';
-import { conversationsStorage } from './storage';
+import { conversationsStorage, currentConversationStorage } from './storage';
 
 export const conversationService = {
-  async loadConversations(): Promise<Conversation[]> {
+  async loadConversations(): Promise<{ conversations: Conversation[], currentId: string | null }> {
     const conversations = await conversationsStorage.load();
-    return Array.isArray(conversations) ? conversations : [];
+    const currentId = await currentConversationStorage.load();
+    return {
+      conversations: Array.isArray(conversations) ? conversations : [],
+      currentId
+    };
   },
 
   async saveConversations(conversations: Conversation[]): Promise<void> {
@@ -16,12 +20,15 @@ export const conversationService = {
     await conversationsStorage.save(conversations);
   },
 
-  createNewConversation(systemMessage: string): Conversation {
+  async setCurrentConversation(conversationId: string | null): Promise<void> {
+    await currentConversationStorage.save(conversationId);
+  },
+
+  createNewConversation(): Conversation {
     return {
       id: uuid.v4() as string,
       messages: [],
       timestamp: Date.now(),
-      systemMessage,
     };
   },
 
@@ -29,7 +36,6 @@ export const conversationService = {
     conversations: Conversation[],
     conversationId: string,
     messages: Message[],
-    systemMessage?: string
   ): Promise<Conversation[]> {
     if (!Array.isArray(conversations)) {
       console.error('updateConversation: conversations doit être un tableau');
@@ -42,7 +48,6 @@ export const conversationService = {
             ...conv, 
             messages, 
             timestamp: Date.now(),
-            ...(systemMessage && { systemMessage })
           }
         : conv
     );

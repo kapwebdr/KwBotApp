@@ -34,13 +34,26 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Charger les conversations au démarrage
   useEffect(() => {
     const loadInitialConversations = async () => {
-      const loadedConversations = await conversationService.loadConversations();
-      if (Array.isArray(loadedConversations) && loadedConversations.length > 0) {
+      const { conversations: loadedConversations, currentId } = await conversationService.loadConversations();
+      
+      if (Array.isArray(loadedConversations)) {
         setConversations(loadedConversations);
-        const lastConversation = loadedConversations[loadedConversations.length - 1];
-        setCurrentConversationId(lastConversation.id);
-        setMessages(lastConversation.messages);
-        setSystemMessage(lastConversation.systemMessage);
+        
+        if (currentId && loadedConversations.find(conv => conv.id === currentId)) {
+          // Charger la conversation sauvegardée
+          const savedConversation = loadedConversations.find(conv => conv.id === currentId);
+          setCurrentConversationId(currentId);
+          setMessages(savedConversation!.messages);
+        } else if (loadedConversations.length > 0) {
+          // Charger la dernière conversation si pas de conversation sauvegardée
+          const lastConversation = loadedConversations[loadedConversations.length - 1];
+          setCurrentConversationId(lastConversation.id);
+          setMessages(lastConversation.messages);
+          await conversationService.setCurrentConversation(lastConversation.id);
+        } else {
+          // Créer une nouvelle conversation si aucune n'existe
+          startNewConversation();
+        }
       } else {
         startNewConversation();
       }
@@ -64,12 +77,12 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [messages, currentConversationId, systemMessage]);
 
-  const loadConversation = (conversationId: string) => {
+  const loadConversation = async (conversationId: string) => {
     const conversation = conversations.find(conv => conv.id === conversationId);
     if (conversation) {
       setCurrentConversationId(conversationId);
       setMessages(conversation.messages);
-      setSystemMessage(conversation.systemMessage);
+      await conversationService.setCurrentConversation(conversationId);
     }
   };
 
@@ -87,11 +100,12 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const startNewConversation = () => {
-    const newConversation = conversationService.createNewConversation(systemMessage);
+  const startNewConversation = async () => {
+    const newConversation = conversationService.createNewConversation();
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversationId(newConversation.id);
     setMessages([]);
+    await conversationService.setCurrentConversation(newConversation.id);
   };
 
   const updateSystemMessage = (message: string) => {

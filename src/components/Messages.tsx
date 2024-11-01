@@ -14,7 +14,6 @@ export const Messages: React.FC = () => {
     loading, 
     tool
   } = useTool();
-  console.log('loading', loading);
   const flatListRef = useRef<FlatList>(null);
   
   const scrollToBottom = () => {

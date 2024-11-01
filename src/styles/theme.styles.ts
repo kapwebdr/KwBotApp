@@ -1,13 +1,9 @@
 import { StyleSheet } from 'react-native';
 import { Theme } from '../types';
 import { lightTheme } from '../theme';
-import { TOOLS } from '../types';
 
-export const createStyles = (themeContext: { theme: Theme }, currentTool?: string) => {
+export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
-  
-  // Calculer le bottomOffset en fonction du tool actuel
-  const bottomOffset = 56; // Hauteur fixe de la bottom bar
   
   return StyleSheet.create({
     container: {
@@ -156,6 +152,11 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       borderRadius: 8,
       marginVertical: 5,
       zIndex: 1,
+      ':hover': {
+        '.messageActions': {
+          display: 'flex',
+        }
+      }
     },
     userBubble: {
       backgroundColor: theme.colors.userBubble,
@@ -355,15 +356,6 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     stopButton: {
       backgroundColor: 'rgba(255, 0, 0, 0.1)',
     },
-    systemMessageInput: {
-      flex: 2,
-      backgroundColor: theme.colors.inputBackground,
-      borderRadius: 4,
-      padding: 8,
-      color: theme.colors.text,
-      fontSize: 14,
-      minWidth: 100,
-    },
     modelSelectContainer: {
       flex: 1,
       position: 'relative',
@@ -444,7 +436,7 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       borderTopWidth: 1,
       borderTopColor: theme.colors.border,
       position: 'absolute',
-      bottom: bottomOffset,
+      bottom: 56,
       left: 0,
       right: 0,
       zIndex: 10,
@@ -507,12 +499,6 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       paddingVertical: 8,
       paddingHorizontal: 8,
       fontSize: 14,
-      '&:disabled': {
-        opacity: 0.5,
-        backgroundColor: theme.colors.gray100,
-        color: theme.colors.gray400,
-        cursor: 'not-allowed',
-      },
     },
     selectContainer: {
       position: 'relative',
@@ -531,7 +517,6 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     },
     selectDisabled: {
       opacity: 0.5,
-      cursor: 'wait',
     },
     configRow: {
       display: 'flex',
@@ -731,6 +716,44 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       paddingLeft: 10,
       paddingRight: 10,
     },
+    messageContent: {
+      position: 'relative',
+      width: '100%',
+    },
+    messageActions: {
+      position: 'absolute',
+      bottom: -10,
+      right: -10,
+      flexDirection: 'row',
+      gap: 4,
+      backgroundColor: theme.colors.background,
+      borderRadius: 4,
+      padding: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+      zIndex: 2,
+    },
+    actionButton: {
+      padding: 4,
+      borderRadius: 4,
+      backgroundColor: theme.colors.aiBubble,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 28,
+      height: 28,
+    },
+    actionButtonActive: {
+      backgroundColor: theme.colors.userBubble,
+    },
+    actionIcon: {
+      color: theme.colors.aiText,
+    },
+    actionIconActive: {
+      color: theme.colors.userText,
+    }
   });
 };
 

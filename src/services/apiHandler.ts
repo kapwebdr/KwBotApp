@@ -120,6 +120,11 @@ class ApiHandler {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const chunk = line.slice(6);
+            
+            if (chunk.trim() === '[DONE]') {
+              return true;
+            }
+
             const processedChunk = endpoint.streamProcessor ? 
               endpoint.streamProcessor(chunk) : 
               chunk;

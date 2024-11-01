@@ -152,6 +152,25 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
         }
         return null;
 
+      case 'number':
+        return (
+          <TextInput
+            style={styles.textInput}
+            value={String(config[field.name] || field.defaultValue || '')}
+            onChangeText={(value) => {
+              const numValue = parseFloat(value);
+              if (!isNaN(numValue)) {
+                if (field.min !== undefined && numValue < field.min) return;
+                if (field.max !== undefined && numValue > field.max) return;
+                handleConfigChange(field.name, numValue);
+              }
+            }}
+            keyboardType="numeric"
+            placeholder={field.placeholder || field.label}
+            placeholderTextColor={theme.colors.text}
+          />
+        );
+
       default:
         return null;
     }

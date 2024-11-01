@@ -41,7 +41,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
   const loading = useLoading();
 
-  const { messages, setMessages, systemMessage } = useConversation();
+  const { messages, setMessages } = useConversation();
 
   const updateToolConfig = (config: Partial<ToolConfig>) => {
     const newConfig = { ...toolConfig, ...config };
@@ -164,7 +164,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...toolConfig,
         input,
         messages: newMessages.slice(0, -1),
-        systemMessage,
         ...args[0]
       };
 
