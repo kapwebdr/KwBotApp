@@ -6,15 +6,11 @@ import { createStyles } from '../styles/theme.styles';
 interface LoadingBubbleProps {
   progress?: number;
   message?: string;
-  status?: string;
-  type?: 'model' | 'generation';
 }
 
 export const LoadingBubble: React.FC<LoadingBubbleProps> = ({ 
   progress, 
-  message = 'Génération en cours',
   status,
-  type = 'generation'
 }) => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
@@ -52,13 +48,6 @@ export const LoadingBubble: React.FC<LoadingBubbleProps> = ({
     };
   }, [dotAnimations]);
 
-  const getMessage = () => {
-    if (type === 'model') {
-      return status || 'Chargement du modèle...';
-    }
-    return message;
-  };
-
   return (
     <View style={[styles.messageBubble, styles.aiBubble]}>
       <View style={styles.loadingContent}>
@@ -82,9 +71,11 @@ export const LoadingBubble: React.FC<LoadingBubbleProps> = ({
             />
           ))}
         </View>
+        {status !== undefined && (
         <Text style={[styles.messageText, styles.aiText]}>
-          {getMessage()}
-        </Text>
+          {status}
+          </Text>
+        )}
         {progress !== undefined && (
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>

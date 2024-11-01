@@ -7,9 +7,8 @@ export const useTool = () => {
   if (!context) {
     throw new Error('useTool must be used within a ToolProvider');
   }
-
   const currentToolConfig = TOOLS.find(tool => tool.id === context.currentTool);
-
+  
   return {
     ...context,
     tool: currentToolConfig,

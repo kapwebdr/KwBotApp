@@ -4,7 +4,6 @@ interface LoadingState {
   isLoading: boolean;
   progress?: number;
   status?: string;
-  type?: 'model' | 'generation' | 'upload';
 }
 
 export const useLoading = () => {
@@ -12,12 +11,11 @@ export const useLoading = () => {
     isLoading: false,
   });
 
-  const startLoading = (type: LoadingState['type'], initialStatus?: string) => {
+  const startLoading = (initialStatus?: string,progress?: number) => {
     setLoadingState({
       isLoading: true,
-      progress: 0,
+      progress: progress,
       status: initialStatus,
-      type,
     });
   };
 

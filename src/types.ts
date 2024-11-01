@@ -66,6 +66,7 @@ export interface ToolAction {
   requiresInput?: boolean;
   requiresModel?: boolean;
   requiresModelLoaded?: boolean;
+  generating?: string;
   errorMessages?: {
     noInput?: string;
     noModel?: string;
@@ -459,6 +460,7 @@ export const TOOLS: Tool[] = [
         type: 'send',
         handler: 'handleTranslation',
         requiresInput: true,
+        generating: 'Traduction en cours...',
         errorMessages: {
           noInput: 'Veuillez entrer un texte à traduire',
           generating: 'Une traduction est déjà en cours',

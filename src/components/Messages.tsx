@@ -2,25 +2,21 @@ import React, { useRef, useEffect } from 'react';
 import { View, FlatList } from 'react-native';
 import { useConversation } from '../contexts/ConversationContext';
 import { MessageBubble } from './MessageBubble';
-import { LoadingBubble } from './LoadingBubble';
 import { createStyles } from '../styles/theme.styles';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTool } from '../hooks/useTool';
-
+import { LoadingBubble } from './LoadingBubble';
 export const Messages: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const { messages } = useConversation();
   const { 
-    isGenerating, 
     loading, 
-    tool,
-    isModelLoading,
-    modelLoadingProgress,
-    modelLoadingStatus 
+    tool
   } = useTool();
+  console.log('loading', loading);
   const flatListRef = useRef<FlatList>(null);
-
+  
   const scrollToBottom = () => {
     if (flatListRef.current) {
       try {
@@ -38,32 +34,18 @@ export const Messages: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, loading.isLoading, isModelLoading]);
+  }, [messages, loading.isLoading]);
 
   const renderMessages = () => {
     const messageComponents = messages.map((message, index) => (
       <MessageBubble
         key={`message-${index}`}
         message={message}
-        isGenerating={isGenerating && index === messages.length - 1}
-        loadingProgress={loading.progress}
-        loadingStatus={loading.status}
-        loadingType={loading.type}
       />
     ));
-
-    if (loading.isLoading && loading.type === 'model') {
-      messageComponents.push(
-        <LoadingBubble
-          key="model-loading"
-          type="model"
-          progress={loading.progress}
-          status={loading.status}
-          message={modelLoadingStatus}
-        />
-      );
+    if (loading.isLoading) {
+      messageComponents.push(<LoadingBubble key="loading-bubble" progress={loading.progress} status={loading.status} />);
     }
-
     return messageComponents;
   };
 

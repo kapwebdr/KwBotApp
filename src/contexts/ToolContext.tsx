@@ -17,9 +17,6 @@ interface ToolContextType {
   setInput: (input: string) => void;
   availableModels: string[];
   selectConfigs: Record<string, any>;
-  isModelLoading: boolean;
-  modelLoadingProgress: number;
-  modelLoadingStatus: string;
   loadSelectedModel: (modelName: string) => Promise<void>;
   isModelLoaded: boolean;
   loading: ReturnType<typeof useLoading>;
@@ -89,7 +86,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadSelectedModel = async (modelName: string) => {
     if (!modelName) return;
-
     const tool = TOOLS.find(t => t.id === currentTool);
     if (!tool?.api?.load) return;
 
@@ -98,7 +94,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    loading.startLoading('model', 'Chargement du modèle...');
+    loading.startLoading( 'Chargement du modèle...', 0);
 
     try {
       const success = await apiHandler.executeApiAction(
@@ -154,6 +150,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       setIsGenerating(true);
+      loading.startLoading(toolAction.generating);
       
       const newMessages = [
         ...messages,
@@ -179,6 +176,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
           params,
           loading.updateProgress,
           (chunk) => {
+            loading.stopLoading();
             streamContent += chunk;
             setMessages([
               ...newMessages.slice(0, -1),
@@ -238,9 +236,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setInput,
     availableModels,
     selectConfigs,
-    isModelLoading: loading.isLoading && loading.type === 'model',
-    modelLoadingProgress: loading.progress || 0,
-    modelLoadingStatus: loading.status || '',
     loadSelectedModel,
     isModelLoaded,
     loading,

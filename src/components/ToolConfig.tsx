@@ -6,8 +6,6 @@ import { createStyles, getSelectStyle } from '../styles/theme.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { useTool } from '../hooks/useTool';
 import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
-import { LoadingBubble } from './LoadingBubble';
-
 interface ToolConfigComponentProps {
   tool: Tool;
   config: IToolConfig;
@@ -269,6 +267,8 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
 
   return (
     <View style={[styles.toolConfigContainer, { backgroundColor: theme.colors.background }]}>
+      
+      
       <View style={styles.toolConfigContent}>
         {tool.configFields && tool.configFields.length > 0 && (
           <View style={styles.configFields}>
