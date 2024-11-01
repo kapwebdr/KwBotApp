@@ -1,51 +1,95 @@
-import { ApiConfig, ToolType, TOOLS } from '../types';
+import { ToolType, TOOLS, ApiEndpoint, ActionType } from '../types';
 import { sessionStorage } from './storage';
 
-export class ApiHandler {
+class ApiHandler {
+  private static instance: ApiHandler | null = null;
   private baseUrl: string;
   private sessionId: string | null = null;
 
-  constructor(baseUrl: string) {
+  private constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+    this.loadSessionId();
   }
 
-  async executeToolAction(
+  public static getInstance(): ApiHandler {
+    if (!ApiHandler.instance) {
+      ApiHandler.instance = new ApiHandler(process.env.BASE_API_URL || '');
+    }
+    return ApiHandler.instance;
+  }
+
+  private async loadSessionId(): Promise<void> {
+    this.sessionId = await sessionStorage.load();
+  }
+
+  private async updateSessionId(newSessionId: string): Promise<void> {
+    if (newSessionId !== this.sessionId) {
+      this.sessionId = newSessionId;
+      await sessionStorage.save(newSessionId);
+    }
+  }
+
+  async executeApiAction(
     toolId: ToolType,
-    actionType: string,
-    params: any,
+    actionType: ActionType,
+    params?: any,
     onProgress?: (progress: number) => void,
     onComplete?: (result: any) => void
   ) {
     const tool = TOOLS.find(t => t.id === toolId);
     if (!tool) throw new Error(`Tool ${toolId} not found`);
 
-    const action = tool.actions?.find(a => a.type === actionType);
-    if (!action?.api) throw new Error(`No API config found for action ${actionType} in tool ${toolId}`);
+    let endpoint: ApiEndpoint | undefined;
+    
+    const toolAction = tool.actions?.find(a => a.type === actionType);
+    if (toolAction) {
+      endpoint = toolAction.api;
+    } else {
+      endpoint = tool.api?.[actionType as 'init' | 'load'];
+    }
+
+    if (!endpoint) throw new Error(`No endpoint found for action ${actionType} in tool ${toolId}`);
+
+    let path = endpoint.path;
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        path = path.replace(`{${key}}`, value as string);
+      });
+    }
 
     try {
-      const response = await fetch(`${this.baseUrl}${action.api.endpoint}`, {
-        method: action.api.method || 'POST',
+      const url = `${this.baseUrl}${path}`;
+      const response = await fetch(url, {
+        method: endpoint.method || 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(this.sessionId ? { 'x-session-id': this.sessionId } : {})
+          ...(this.sessionId ? { 'x-session-id': this.sessionId } : {}),
+          ...endpoint.headers
         },
-        body: action.api.requestTransform ? 
-          JSON.stringify(action.api.requestTransform(params)) : 
-          JSON.stringify(params)
+        ...(params && {
+          body: endpoint.requestTransform ? 
+            JSON.stringify(endpoint.requestTransform(params)) : 
+            JSON.stringify(params)
+        })
       });
 
       const newSessionId = response.headers.get('x-session-id');
       if (newSessionId) {
-        this.sessionId = newSessionId;
-        await sessionStorage.save(newSessionId);
+        await this.updateSessionId(newSessionId);
       }
 
-      if (action.api.streaming) {
-        return this.handleStreamResponse(response, action.api, onProgress, onComplete);
+      if (endpoint.streaming) {
+        return this.handleStreamResponse(response, endpoint, onProgress, onComplete);
       }
 
       const data = await response.json();
-      return action.api.responseTransform ? action.api.responseTransform(data) : data;
+      const result = endpoint.responseTransform ? endpoint.responseTransform(data) : data;
+      
+      if (onComplete) {
+        onComplete(result);
+      }
+      
+      return result;
     } catch (error) {
       console.error(`API error for ${toolId}/${actionType}:`, error);
       throw error;
@@ -54,7 +98,7 @@ export class ApiHandler {
 
   private async handleStreamResponse(
     response: Response,
-    config: ApiConfig,
+    endpoint: ApiEndpoint,
     onProgress?: (progress: number) => void,
     onComplete?: (result: any) => void
   ) {
@@ -64,48 +108,47 @@ export class ApiHandler {
     const decoder = new TextDecoder();
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const chunk = line.slice(6);
-          const processedChunk = config.streamProcessor ? config.streamProcessor(chunk) : chunk;
-          
-          if (!processedChunk) continue;
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const chunk = line.slice(6);
+            const processedChunk = endpoint.streamProcessor ? 
+              endpoint.streamProcessor(chunk) : 
+              chunk;
 
-          try {
-            const data = JSON.parse(processedChunk.replace(/'/g, '"'));
-            
-            if (data.progress !== undefined && onProgress && config.progressEvent) {
-              onProgress(data.progress);
-            }
+            if (!processedChunk) continue;
 
-            if (data.status === config.completedEvent && onComplete) {
-              onComplete(data);
-              return true;
-            }
-
-            if (onComplete) {
-              onComplete(processedChunk);
-            }
-          } catch (error) {
-            // Si le chunk n'est pas du JSON valide, on le traite comme une chaîne simple
-            if (onComplete) {
-              onComplete(processedChunk);
+            try {
+              const data = JSON.parse(processedChunk);
+              if (data.progress !== undefined && onProgress) {
+                onProgress(data.progress);
+              }
+              if (onComplete) {
+                onComplete(processedChunk);
+              }
+            } catch {
+              if (onComplete) {
+                onComplete(processedChunk);
+              }
             }
           }
         }
       }
+    } finally {
+      reader.releaseLock();
     }
 
-    return false;
+    return true;
   }
 }
 
-export const api = new ApiHandler(process.env.BASE_API_URL || '');
+// Exporter directement l'instance unique
+export const apiHandler = ApiHandler.getInstance();

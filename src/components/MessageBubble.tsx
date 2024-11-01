@@ -1,118 +1,70 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
+import { View, Text } from 'react-native';
 import { Message } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import Clipboard from '@react-native-clipboard/clipboard';
-import { Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { LoadingBubble } from './LoadingBubble';
 
 interface MessageBubbleProps {
   message: Message;
   isGenerating: boolean;
-  loadingProgress: number;
-  dots: string;
-  isWaitingFirstResponse: boolean;
+  loadingProgress?: number;
+  loadingStatus?: string;
+  loadingType?: 'model' | 'generation' | 'translation' | 'ocr' | 'analysis';
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isGenerating,
   loadingProgress,
-  dots,
-  isWaitingFirstResponse,
+  loadingStatus,
+  loadingType = 'generation'
 }) => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
 
-  const renderCodeBlock = (code: string, language: string) => (
-    <View style={styles.codeBlockContainer}>
-      <SyntaxHighlighter
-        language={language}
-        style={tomorrow}
-        customStyle={styles.codeBlock}
-      >
-        {code}
-      </SyntaxHighlighter>
-      <TouchableOpacity
-        style={styles.copyButton}
-        onPress={() => {
-          Clipboard.setString(code);
-          Alert.alert('Copié', 'Le code a été copié dans le presse-papiers');
-        }}
-      >
-        <Ionicons name="copy-outline" size={24} color={theme.colors.primary} />
-      </TouchableOpacity>
-    </View>
-  );
+  const isAI = message.role === 'assistant' || message.role === 'ai';
 
-  // Vérifier si le contenu est une image base64
-  const imageMatch = message.content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[^)]+)\)/);
-  
-  if (imageMatch) {
-    const base64Data = imageMatch[1];
+  if (isAI && isGenerating && message.content === '...') {
     return (
-      <View style={[
-        styles.messageBubble,
-        message.role === 'human' ? styles.userBubble : styles.aiBubble
-      ]}>
-        {isGenerating ? (
-          <View style={styles.imageGenerationProgress}>
-            <Text style={[styles.messageText, message.role === 'human' ? styles.userText : styles.aiText]}>
-              Génération de l'image en cours...
-            </Text>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${loadingProgress * 100}%` }
-                ]} 
-              />
-            </View>
-          </View>
-        ) : (
-          <Image
-            source={{ uri: base64Data }}
-            style={styles.messageImage}
-            resizeMode="contain"
-          />
-        )}
-      </View>
+      <LoadingBubble 
+        type={loadingType}
+        progress={loadingProgress}
+        status={loadingStatus || getDefaultLoadingMessage(loadingType)}
+      />
     );
   }
 
-  // Si ce n'est pas une image, continuer avec le rendu normal du message
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const parts = message.content.split(codeBlockRegex);
-
   return (
-    <View style={[
-      styles.messageBubble,
-      message.role === 'human' ? styles.userBubble : styles.aiBubble
-    ]}>
-      {parts.map((part, index) => {
-        if (index % 3 === 0) {
-          return (
-            <Text key={`text-${index}`} style={[
-              styles.messageText,
-              message.role === 'human' ? styles.userText : styles.aiText
-            ]}>
-              {message.role === 'assistant' && isWaitingFirstResponse && part === '...' 
-                ? '...' + dots 
-                : part}
-            </Text>
-          );
-        } else if (index % 3 === 1) {
-          const language = part || 'javascript';
-          const code = parts[index + 1];
-          return <View key={`code-${index}`}>{renderCodeBlock(code, language)}</View>;
-        }
-        return null;
-      })}
+    <View
+      style={[
+        styles.messageBubble,
+        isAI ? styles.aiBubble : styles.userBubble,
+      ]}
+    >
+      <Text
+        style={[
+          styles.messageText,
+          isAI ? styles.aiText : styles.userText,
+        ]}
+      >
+        {message.content}
+      </Text>
     </View>
   );
 };
 
-export default MessageBubble;
+const getDefaultLoadingMessage = (type: string): string => {
+  switch (type) {
+    case 'model':
+      return 'Chargement du modèle...';
+    case 'translation':
+      return 'Traduction en cours...';
+    case 'ocr':
+      return 'Extraction du texte...';
+    case 'analysis':
+      return 'Analyse de l\'image...';
+    default:
+      return 'Génération en cours...';
+  }
+};

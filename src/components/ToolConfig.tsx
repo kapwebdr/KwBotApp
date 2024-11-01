@@ -6,6 +6,7 @@ import { createStyles, getSelectStyle } from '../styles/theme.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { useTool } from '../hooks/useTool';
 import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
+import { LoadingBubble } from './LoadingBubble';
 
 interface ToolConfigComponentProps {
   tool: Tool;
@@ -20,7 +21,8 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
-  const styles = createStyles({ theme }, tool.id);
+  const { loading } = useTool();
+  const styles = createStyles({ theme });
   const { 
     selectConfigs,
     input,

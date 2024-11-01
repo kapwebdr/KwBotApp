@@ -35,27 +35,33 @@ export interface ToolConfigField {
   type: 'text' | 'select' | 'number';
   placeholder?: string;
   loading?: boolean;
-  options?: string[] | { value: string; label: string }[];
   defaultValue?: string | number;
+  options?: string[] | { value: string; label: string }[];
   min?: number;
   max?: number;
   step?: number;
+  onSelect?: {
+    action: ActionType;
+    paramName: string;
+    replaceInPath?: string;
+  };
 }
 
-export interface ApiConfig {
-  endpoint: string;
+export type ActionType = 'init' | 'load' | 'execute' | 'stop' | 'send' | 'upload' | 'url';
+
+export interface ApiEndpoint {
+  path: string;
   method?: 'GET' | 'POST';
   streaming?: boolean;
-  responseType: 'json' | 'stream' | 'base64';
+  responseType?: 'json' | 'stream' | 'base64';
   requestTransform?: (params: any) => any;
   responseTransform?: (response: any) => any;
-  progressEvent?: string;
-  completedEvent?: string;
   streamProcessor?: (chunk: string) => string;
+  headers?: Record<string, string>;
 }
 
 export interface ToolAction {
-  type: 'send' | 'upload' | 'url' | 'stop';
+  type: ActionType;
   handler: string;
   requiresInput?: boolean;
   requiresModel?: boolean;
@@ -66,9 +72,8 @@ export interface ToolAction {
     modelNotLoaded?: string;
     generating?: string;
     apiError?: string;
-    noFile?: string;
   };
-  api?: ApiConfig;
+  api: ApiEndpoint;
 }
 
 export interface Tool {
@@ -78,21 +83,44 @@ export interface Tool {
   features?: ToolFeatures;
   configFields?: ToolConfigField[];
   defaultConfig?: ToolConfig;
-  actions?: ToolAction[];
-  requiresModel?: boolean;
-  modelLoadingRequired?: boolean;
+  actions: ToolAction[];
   api?: {
-    [key: string]: ApiConfig;
+    init?: ApiEndpoint;
+    load?: ApiEndpoint;
+  };
+  config?: {
+    requiresModel?: boolean;
+    modelLoadingRequired?: boolean;
+    availableModels?: Record<string, { name: string; type: string }>;
+    languages?: Record<string, { label: string; code: string }>;
   };
 }
 
 export const TOOLS: Tool[] = [
-  { 
+  {
     id: 'chat',
     label: 'Chat',
     icon: 'chatbubbles',
-    requiresModel: true,
-    modelLoadingRequired: true,
+    features: {
+      promptInput: {
+        placeholder: 'Tapez votre message...',
+        multiline: true,
+      }
+    },
+    configFields: [
+      {
+        name: 'model',
+        type: 'select',
+        label: 'Modèle',
+        loading: true,
+        defaultValue: '',
+        onSelect: {
+          action: 'load',
+          paramName: 'modelId',
+          replaceInPath: '{modelId}'
+        }
+      }
+    ],
     actions: [
       {
         type: 'send',
@@ -108,7 +136,7 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'appel à l\'API'
         },
         api: {
-          endpoint: '/chat/completions',
+          path: '/chat/completions',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
@@ -117,87 +145,61 @@ export const TOOLS: Tool[] = [
             messages: params.messages,
             stream: true,
             system: params.systemMessage,
-          }),
-          streamProcessor: (chunk: string) => {
-            if (chunk === '[DONE]') return '';
-            try {
-              return chunk;
-            } catch (error) {
-              console.error('Erreur lors du parsing du chunk:', error);
-              return '';
-            }
-          }
+          })
         }
       }
     ],
+    api: {
+      init: {
+        path: '/models',
+        method: 'GET',
+        responseType: 'json',
+        responseTransform: (response) => response.models
+      },
+      load: {
+        path: '/models/{modelId}/load',
+        method: 'POST',
+        streaming: true,
+        responseType: 'stream'
+      }
+    },
+    config: {
+      requiresModel: true,
+      modelLoadingRequired: true
+    }
+  },
+
+  {
+    id: 'image-generation',
+    label: 'Génération d\'image',
+    icon: 'image',
     features: {
       promptInput: {
-        placeholder: 'Tapez votre message...',
-        multiline: true,
+        placeholder: 'Entrez une description...',
+        multiline: true
+      },
+      fileUpload: {
+        accept: ['image/*'],
+        multiple: false,
+        base64Input: true
       }
     },
     configFields: [
-      {
-        name: 'systemMessage',
-        type: 'text',
-        label: 'Message système',
-        defaultValue: 'Vous êtes un assistant IA utile.'
-      },
       {
         name: 'model',
         type: 'select',
         label: 'Modèle',
         loading: true,
         defaultValue: ''
-      }
-    ]
-  },
-  { 
-    id: 'image-generation',
-    label: 'Génération d\'image',
-    icon: 'image',
-    actions: [
-      {
-        type: 'send',
-        handler: 'handleImageGeneration',
-        requiresInput: true,
-        errorMessages: {
-          noInput: 'Veuillez décrire l\'image à générer',
-          generating: 'Une génération est déjà en cours',
-          apiError: 'Erreur lors de la génération de l\'image'
-        },
-        api: {
-          endpoint: '/images/generate',
-          method: 'POST',
-          streaming: true,
-          responseType: 'base64',
-          requestTransform: (params) => ({
-            model_type: params.modelType,
-            prompt: params.input,
-            width: params.width,
-            height: params.height,
-            steps: params.steps
-          }),
-          progressEvent: 'progress',
-          completedEvent: 'completed'
-        }
-      }
-    ],
-    features: {
-      promptInput: {
-        placeholder: 'Décrivez l\'image...',
-        multiline: true
-      }
-    },
-    configFields: [
+      },
       {
         name: 'modelType',
         type: 'select',
-        label: 'Modèle',
-        defaultValue: 'sdxl/turbo',
+        label: 'Type de modèle',
+        defaultValue: 'sdxl/base',
         options: [
-          { value: 'sdxl/turbo', label: 'SDXL Turbo' },
           { value: 'sdxl/base', label: 'SDXL Base' },
+          { value: 'sdxl/turbo', label: 'SDXL Turbo' },
           { value: 'sd/v1.5', label: 'Stable Diffusion 1.5' }
         ]
       },
@@ -205,54 +207,74 @@ export const TOOLS: Tool[] = [
         name: 'width',
         type: 'number',
         label: 'Largeur',
-        defaultValue: 1024,
-        min: 512,
-        max: 2048,
+        defaultValue: 512,
+        min: 256,
+        max: 1024,
         step: 64
       },
       {
         name: 'height',
         type: 'number',
         label: 'Hauteur',
-        defaultValue: 1024,
-        min: 512,
-        max: 2048,
+        defaultValue: 512,
+        min: 256,
+        max: 1024,
         step: 64
       },
       {
         name: 'steps',
         type: 'number',
         label: 'Étapes',
-        defaultValue: 20,
+        defaultValue: 50,
         min: 1,
         max: 100,
         step: 1
+      },
+      {
+        name: 'strength',
+        type: 'number',
+        label: 'Force',
+        defaultValue: 0.8,
+        min: 0,
+        max: 1,
+        step: 0.1
       }
-    ]
-  },
-  { 
-    id: 'image-analysis',
-    label: 'Analyse d\'image',
-    icon: 'scan',
+    ],
     actions: [
       {
         type: 'upload',
-        handler: 'handleImageAnalysis',
+        handler: 'handleImageGeneration',
+        requiresInput: true,
         errorMessages: {
-          noFile: 'Veuillez sélectionner une image',
-          apiError: 'Erreur lors de l\'analyse de l\'image'
+          noInput: 'Veuillez entrer une description',
+          noModel: 'Veuillez sélectionner un modèle',
+          modelNotLoaded: 'Le modèle est en cours de chargement',
+          generating: 'Une génération est déjà en cours',
+          apiError: 'Erreur lors de la génération de l\'image'
         },
         api: {
-          endpoint: '/images/analyze',
+          path: '/images/generate',
           method: 'POST',
-          responseType: 'json',
+          streaming: true,
+          responseType: 'stream',
           requestTransform: (params) => ({
-            image: params.base64,
-            labels: params.labels
+            prompt: params.input,
+            model: params.model,
+            modelType: params.modelType,
+            width: params.width,
+            height: params.height,
+            steps: params.steps,
+            strength: params.strength
           })
         }
       }
-    ],
+    ]
+  },
+
+  {
+    id: 'image-analysis',
+    label: 'Analyse d\'image',
+    icon: 'scan',
     features: {
       fileUpload: {
         accept: ['image/*'],
@@ -268,12 +290,39 @@ export const TOOLS: Tool[] = [
         defaultValue: ['chat', 'chien', 'oiseau', 'personne', 'voiture'],
         options: ['chat', 'chien', 'oiseau', 'personne', 'voiture', 'vélo', 'arbre', 'maison']
       }
+    ],
+    actions: [
+      {
+        type: 'upload',
+        handler: 'handleImageAnalysis',
+        errorMessages: {
+          noFile: 'Veuillez sélectionner une image',
+          apiError: 'Erreur lors de l\'analyse de l\'image'
+        },
+        api: {
+          path: '/images/analyze',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            image: params.base64,
+            labels: params.labels
+          })
+        }
+      }
     ]
   },
+
   {
     id: 'ocr',
     label: 'Extraction de texte',
     icon: 'text',
+    features: {
+      fileUpload: {
+        accept: ['image/*'],
+        multiple: false,
+        base64Input: true
+      }
+    },
     actions: [
       {
         type: 'upload',
@@ -283,54 +332,25 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'extraction du texte'
         },
         api: {
-          endpoint: '/images/ocr',
+          path: '/images/ocr',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
             image: params.base64
           }),
-          responseTransform: (response) => (response.text)
+          responseTransform: (response) => response.text
         }
       }
     ],
-    features: {
-      fileUpload: {
-        accept: ['image/*'],
-        multiple: false,
-        base64Input: true
-      }
+    config: {
+      requiresModel: false
     }
   },
-  { 
+
+  {
     id: 'image-refine',
     label: 'Amélioration d\'image',
     icon: 'brush',
-    actions: [
-      {
-        type: 'upload',
-        handler: 'handleImageRefinement',
-        requiresInput: true,
-        errorMessages: {
-          noFile: 'Veuillez sélectionner une image',
-          noInput: 'Veuillez dcrire les modifications souhaitées',
-          apiError: 'Erreur lors de l\'amélioration de l\'image'
-        },
-        api: {
-          endpoint: '/images/refine',
-          method: 'POST',
-          streaming: true,
-          responseType: 'base64',
-          requestTransform: (params) => ({
-            image: params.base64,
-            prompt: params.input,
-            strength: params.strength,
-            steps: params.steps
-          }),
-          progressEvent: 'progress',
-          completedEvent: 'completed'
-        }
-      }
-    ],
     features: {
       promptInput: {
         placeholder: 'Instructions de modification...',
@@ -371,35 +391,37 @@ export const TOOLS: Tool[] = [
         max: 100,
         step: 1
       }
+    ],
+    actions: [
+      {
+        type: 'upload',
+        handler: 'handleImageRefinement',
+        requiresInput: true,
+        errorMessages: {
+          noFile: 'Veuillez sélectionner une image',
+          noInput: 'Veuillez décrire les modifications souhaitées',
+          apiError: 'Erreur lors de l\'amélioration de l\'image'
+        },
+        api: {
+          path: '/images/refine',
+          method: 'POST',
+          streaming: true,
+          responseType: 'base64',
+          requestTransform: (params) => ({
+            image: params.base64,
+            prompt: params.input,
+            strength: params.strength || 0.3,
+            steps: params.steps || 20
+          })
+        }
+      }
     ]
   },
+
   {
     id: 'translation',
     label: 'Traduction',
     icon: 'language',
-    actions: [
-      {
-        type: 'send',
-        handler: 'handleTranslation',
-        requiresInput: true,
-        errorMessages: {
-          noInput: 'Veuillez entrer un texte à traduire',
-          generating: 'Une traduction est déjà en cours',
-          apiError: 'Erreur lors de la traduction'
-        },
-        api: {
-          endpoint: '/translation/translate',
-          method: 'POST',
-          responseType: 'json',
-          requestTransform: (params) => ({
-            text: params.input,
-            from_lang: params.fromLang || 'fr',
-            to_lang: params.toLang || 'en'
-          }),
-          responseTransform: (response) => response.translated_text
-        }
-      }
-    ],
     features: {
       promptInput: {
         placeholder: 'Entrez le texte à traduire...',
@@ -430,6 +452,29 @@ export const TOOLS: Tool[] = [
           { value: 'es', label: 'Espagnol' },
           { value: 'de', label: 'Allemand' }
         ]
+      }
+    ],
+    actions: [
+      {
+        type: 'send',
+        handler: 'handleTranslation',
+        requiresInput: true,
+        errorMessages: {
+          noInput: 'Veuillez entrer un texte à traduire',
+          generating: 'Une traduction est déjà en cours',
+          apiError: 'Erreur lors de la traduction'
+        },
+        api: {
+          path: '/translation/translate',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            text: params.input,
+            from_lang: params.fromLang || 'fr',
+            to_lang: params.toLang || 'en'
+          }),
+          responseTransform: (response) => response.translated_text
+        }
       }
     ]
   }
@@ -503,3 +548,21 @@ export interface Conversation {
 export type ToolHandlers = {
   [key: string]: (...args: any[]) => Promise<void>;
 }; 
+
+export interface ModelConfig {
+  endpoint: string;
+  type: 'chat' | 'image' | 'translation';
+  availableModels?: {
+    [key: string]: {
+      name: string;
+      type: string;
+    };
+  };
+  languages?: {
+    [key: string]: {
+      label: string;
+      code: string;
+    };
+  };
+}
+

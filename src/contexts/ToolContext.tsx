@@ -1,28 +1,15 @@
 import React, { createContext, useState, useEffect, useMemo } from 'react';
-import { ToolType, ToolConfig, Message, ToolConfigField, ToolAction } from '../types';
-import { TOOLS } from '../types';
-import { 
-  streamChatCompletion, 
-  stopGeneration, 
-  getAvailableModels,
-  generateImage,
-  analyzeImage,
-  extractTextFromImage,
-  refineImage,
-  translateText,
-  getImageModels,
-  loadModel
-} from '../services/api';
+import { ToolType, ToolConfig, Message, TOOLS } from '../types';
 import { useConversation } from './ConversationContext';
-import { toolConfigsStorage } from '../services/storage';
-import { ApiHandler } from '../services/apiHandler';
+import { apiHandler } from '../services/apiHandler';
+import { useLoading } from '../hooks/useLoading';
 
 interface ToolContextType {
   currentTool: ToolType;
   setCurrentTool: (tool: ToolType) => void;
   toolConfig: ToolConfig;
   updateToolConfig: (config: Partial<ToolConfig>) => void;
-  handleToolAction: (action: string, ...args: any[]) => Promise<void>;
+  handleToolAction: (action: ActionType, ...args: any[]) => Promise<void>;
   isToolMenuOpen: boolean;
   setIsToolMenuOpen: (isOpen: boolean) => void;
   isGenerating: boolean;
@@ -35,15 +22,10 @@ interface ToolContextType {
   modelLoadingStatus: string;
   loadSelectedModel: (modelName: string) => Promise<void>;
   isModelLoaded: boolean;
+  loading: ReturnType<typeof useLoading>;
 }
 
 export const ToolContext = createContext<ToolContextType | null>(null);
-
-interface ImageModel {
-  id: string;
-  name: string;
-  type: string;
-}
 
 interface ToolState {
   config: ToolConfig;
@@ -57,57 +39,13 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [input, setInput] = useState('');
-  const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [imageModels, setImageModels] = useState<ImageModel[]>([]);
-  const [isModelLoading, setIsModelLoading] = useState(false);
-  const [modelLoadingProgress, setModelLoadingProgress] = useState(0);
-  const [modelLoadingStatus, setModelLoadingStatus] = useState('');
-  const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
+  const loading = useLoading();
 
   const { messages, setMessages, systemMessage } = useConversation();
 
-  // Initialisation des états des outils et chargement des modèles
-  useEffect(() => {
-    const initializeTools = async () => {
-      try {
-        const models = await getAvailableModels();
-        const imgModels = await getImageModels();
-        setAvailableModels(models);
-        setImageModels(imgModels);
-
-        const states: Partial<Record<ToolType, ToolState>> = {};
-        for (const tool of TOOLS) {
-          const savedConfig = await toolConfigsStorage.load();
-          const toolConfig = savedConfig?.[tool.id];
-          states[tool.id] = {
-            config: {
-              ...tool.defaultConfig,
-              ...toolConfig
-            },
-            isModelLoaded: false
-          };
-        }
-        setToolStates(states as Record<ToolType, ToolState>);
-      } catch (error) {
-        console.error('Erreur lors de l\'initialisation des outils:', error);
-      }
-    };
-
-    initializeTools();
-  }, []);
-
-  // Mise à jour de la configuration actuelle lors du changement d'outil
-  useEffect(() => {
-    const toolState = toolStates[currentTool];
-    if (toolState) {
-      setToolConfig(toolState.config);
-      setIsModelLoaded(toolState.isModelLoaded);
-    }
-  }, [currentTool, toolStates]);
-
-  // Sauvegarde automatique des configurations
   const updateToolConfig = (config: Partial<ToolConfig>) => {
     const newConfig = { ...toolConfig, ...config };
     setToolConfig(newConfig);
@@ -119,245 +57,153 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         config: newConfig
       }
     }));
-
-    toolConfigsStorage.update(prevConfigs => ({
-      ...prevConfigs,
-      [currentTool]: newConfig
-    }));
   };
 
-  const updateToolState = (toolId: ToolType, updates: Partial<ToolState>) => {
-    setToolStates(prev => ({
-      ...prev,
-      [toolId]: {
-        ...prev[toolId],
-        ...updates
+  // Initialisation des outils
+  useEffect(() => {
+    const initializeTool = async () => {
+      try {
+        const tool = TOOLS.find(t => t.id === currentTool);
+        if (!tool) return;
+
+        if (tool.api?.init) {
+          const result = await apiHandler.executeApiAction(
+            currentTool,
+            'init',
+            undefined,
+            loading.updateProgress
+          );
+          if (result && tool.config?.requiresModel) {
+            setAvailableModels(result);
+          }
+        }
+
+        setToolConfig(tool.defaultConfig || {});
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation de l\'outil:', error);
       }
-    }));
-  };
+    };
+
+    initializeTool();
+  }, [currentTool]);
 
   const loadSelectedModel = async (modelName: string) => {
     if (!modelName) return;
+
+    const tool = TOOLS.find(t => t.id === currentTool);
+    if (!tool?.api?.load) return;
 
     const currentState = toolStates[currentTool];
     if (currentState?.loadedModel === modelName && currentState.isModelLoaded) {
       return;
     }
 
-    setIsModelLoading(true);
-    setModelLoadingProgress(0);
-    setModelLoadingStatus('Chargement du modèle...');
+    loading.startLoading('model', 'Chargement du modèle...');
 
     try {
-      const success = await loadModel(
-        modelName,
-        (progress) => {
-          setModelLoadingProgress(progress);
-        },
-        (status) => {
-          setModelLoadingStatus(status);
-          if (status === 'loaded') {
-            setToolStates(prev => ({
-              ...prev,
-              [currentTool]: {
-                ...prev[currentTool],
-                loadedModel: modelName,
-                isModelLoaded: true
-              }
-            }));
-            setIsModelLoaded(true);
-          }
-        }
+      const success = await apiHandler.executeApiAction(
+        currentTool,
+        'load',
+        { modelId: modelName },
+        loading.updateProgress
       );
 
       if (success) {
-        updateToolConfig({ model: modelName });
-      } else {
-        setModelLoadingStatus('Échec du chargement du modèle');
-        updateToolConfig({ model: undefined });
-        setIsModelLoaded(false);
         setToolStates(prev => ({
           ...prev,
           [currentTool]: {
             ...prev[currentTool],
-            loadedModel: undefined,
-            isModelLoaded: false
+            loadedModel: modelName,
+            isModelLoaded: true
           }
         }));
+        setIsModelLoaded(true);
+        updateToolConfig({ model: modelName });
       }
     } catch (error) {
       console.error('Erreur lors du chargement du modèle:', error);
-      setModelLoadingStatus('Erreur lors du chargement du modèle');
       updateToolConfig({ model: undefined });
       setIsModelLoaded(false);
     } finally {
-      setIsModelLoading(false);
+      loading.stopLoading();
     }
   };
 
-  // Charger automatiquement le modèle quand il est sélectionné
-  useEffect(() => {
-    const selectedModel = toolConfig.model;
-    if (selectedModel && !isModelLoading) {
-      loadSelectedModel(selectedModel);
-    }
-  }, [toolConfig.model]);
-
-  const handleError = (error: Error, errorMessage?: string) => {
-    console.error(errorMessage || error.message, error);
-  };
-
-  const api = new ApiHandler(process.env.BASE_API_URL || '');
-
-  const validateToolAction = (toolAction: ToolAction): boolean => {
-    if (toolAction.requiresInput && !input.trim()) {
-      handleError(new Error(toolAction.errorMessages?.noInput));
-      return false;
-    }
-
-    if (toolAction.requiresModel && !toolConfig.model) {
-      handleError(new Error(toolAction.errorMessages?.noModel));
-      return false;
-    }
-
-    if (toolAction.requiresModelLoaded && !isModelLoaded) {
-      handleError(new Error(toolAction.errorMessages?.modelNotLoaded));
-      return false;
-    }
-
-    if (isGenerating) {
-      handleError(new Error(toolAction.errorMessages?.generating));
-      return false;
-    }
-
-    return true;
-  };
-
-  const formatResponse = (action: ToolAction, result: any): string => {
-    switch (action.type) {
-      case 'send':
-        return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-      case 'upload':
-        if (result.base64) {
-          return `![Image](data:image/png;base64,${result.base64})`;
-        }
-        return JSON.stringify(result, null, 2);
-      default:
-        return JSON.stringify(result, null, 2);
-    }
-  };
-
-  const handleToolAction = async (actionType: string, ...args: any[]) => {
+  const handleToolAction = async (actionType: ActionType, ...args: any[]) => {
     const tool = TOOLS.find(t => t.id === currentTool);
     if (!tool) return;
 
     const toolAction = tool.actions?.find(a => a.type === actionType);
     if (!toolAction) return;
 
-    if (!validateToolAction(toolAction)) return;
+    // Validation des prérequis
+    if (toolAction.requiresInput && !input.trim()) {
+      console.error(toolAction.errorMessages?.noInput);
+      return;
+    }
+
+    if (toolAction.requiresModel && !toolConfig.model) {
+      console.error(toolAction.errorMessages?.noModel);
+      return;
+    }
+
+    if (toolAction.requiresModelLoaded && !isModelLoaded) {
+      console.error(toolAction.errorMessages?.modelNotLoaded);
+      return;
+    }
 
     try {
       setIsGenerating(true);
       
+      const newMessages = [
+        ...messages,
+        { role: 'human', content: input } as Message,
+        { role: 'assistant', content: '...' } as Message
+      ];
+      setMessages(newMessages.slice(0, -1));
+      setInput('');
+
       const params = {
         ...toolConfig,
         input,
-        messages,
+        messages: newMessages.slice(0, -1),
         systemMessage,
         ...args[0]
       };
 
-      // Gestion spéciale pour le chat qui nécessite un streaming
-      if (currentTool === 'chat') {
-        const newMessages = [
-          ...messages,
-          { role: 'human', content: input } as Message,
-        ];
-        setMessages(newMessages);
-        setInput('');
-
-        const aiMessage: Message = {
-          role: 'assistant',
-          content: '...',
-        };
-        setMessages([...newMessages, aiMessage]);
-        setIsWaitingFirstResponse(true);
-
-        await api.executeToolAction(
+      if (toolAction.api.streaming) {
+        let streamContent = '';
+        await apiHandler.executeApiAction(
           currentTool,
           actionType,
           params,
-          (progress) => setModelLoadingProgress(progress),
+          loading.updateProgress,
           (chunk) => {
-            if (isWaitingFirstResponse) {
-              setIsWaitingFirstResponse(false);
-            }
-            aiMessage.content = isWaitingFirstResponse ? chunk : aiMessage.content + chunk;
-            setMessages([...newMessages, { ...aiMessage }]);
+            streamContent += chunk;
+            setMessages([
+              ...newMessages.slice(0, -1),
+              { role: 'assistant', content: streamContent } as Message
+            ]);
           }
         );
       } else {
-        // Gestion standard pour les autres outils
-        const result = await api.executeToolAction(
+        const result = await apiHandler.executeApiAction(
           currentTool,
           actionType,
           params,
-          (progress) => setModelLoadingProgress(progress),
-          (result) => {
-            handleActionResult(toolAction, result);
-          }
+          loading.updateProgress
         );
 
-        if (!toolAction.api?.streaming) {
-          handleActionResult(toolAction, result);
-        }
-        setInput('');
+        setMessages([
+          ...newMessages.slice(0, -1),
+          { role: 'assistant', content: result } as Message
+        ]);
       }
     } catch (error) {
-      handleError(error as Error, toolAction.errorMessages?.apiError);
+      console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
     } finally {
       setIsGenerating(false);
-      setIsWaitingFirstResponse(false);
-    }
-  };
-
-  const handleActionResult = (action: ToolAction, result: any) => {
-    const newMessages = [
-      ...messages,
-      { role: 'human', content: input },
-      { role: 'assistant', content: formatResponse(action, result) }
-    ];
-    setMessages(newMessages);
-  };
-
-  const getSelectConfigForField = (field: ToolConfigField) => {
-    const currentValue = toolConfig[field.name];
-    
-    switch (field.name) {
-      case 'model':
-        return {
-          value: currentValue || field.defaultValue || '',
-          options: availableModels,
-          isLoading: field.loading && isModelLoading,
-          onChange: loadSelectedModel
-        };
-      case 'modelType':
-        return {
-          value: currentValue || field.defaultValue || '',
-          options: imageModels
-            .filter(model => model.type === 'text2image')
-            .map(model => ({
-              value: model.id,
-              label: model.name
-            })),
-          onChange: (value: string) => updateToolConfig({ [field.name]: value })
-        };
-      default:
-        return {
-          value: currentValue || field.defaultValue || '',
-          options: field.options || [],
-          onChange: (value: string) => updateToolConfig({ [field.name]: value })
-        };
+      loading.stopLoading();
     }
   };
 
@@ -367,13 +213,19 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return tool.configFields.reduce((configs, field) => {
       if (field.type === 'select') {
-        configs[field.name] = getSelectConfigForField(field);
+        configs[field.name] = {
+          value: toolConfig[field.name] || field.defaultValue || '',
+          options: field.name === 'model' ? availableModels : field.options || [],
+          isLoading: field.loading && loading.isLoading,
+          onChange: field.name === 'model' ? loadSelectedModel : 
+            (value: string) => updateToolConfig({ [field.name]: value })
+        };
       }
       return configs;
     }, {} as Record<string, any>);
-  }, [currentTool, toolConfig, availableModels, imageModels, isModelLoading]);
+  }, [currentTool, toolConfig, availableModels, loading.isLoading]);
 
-  const value: ToolContextType = {
+  const value = {
     currentTool,
     setCurrentTool,
     toolConfig,
@@ -386,11 +238,12 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setInput,
     availableModels,
     selectConfigs,
-    isModelLoading,
-    modelLoadingProgress,
-    modelLoadingStatus,
+    isModelLoading: loading.isLoading && loading.type === 'model',
+    modelLoadingProgress: loading.progress || 0,
+    modelLoadingStatus: loading.status || '',
     loadSelectedModel,
     isModelLoaded,
+    loading,
   };
 
   return (

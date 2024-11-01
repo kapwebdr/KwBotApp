@@ -45,12 +45,12 @@ export const lightTheme: Theme = {
 
 export const darkTheme: Theme = {
   colors: {
-    primary: '#00FF9C',
+    primary: '#048A81',
     background: '#1A1B1E',
     text: '#E0E0E0',
-    userBubble: '#00FF9C',
+    userBubble: '#048A81',
     aiBubble: '#2A2B2E',
-    userText: '#1A1B1E',
+    userText: '#E0E0E0',
     aiText: '#E0E0E0',
     inputBackground: '#2A2B2E',
     border: '#3A3B3E',

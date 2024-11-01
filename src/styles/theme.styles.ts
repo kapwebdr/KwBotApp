@@ -158,7 +158,7 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
       zIndex: 1,
     },
     userBubble: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: theme.colors.userBubble,
       alignSelf: 'flex-end',
       marginLeft: '20%',
     },
@@ -680,6 +680,56 @@ export const createStyles = (themeContext: { theme: Theme }, currentTool?: strin
     themeMenuItemTextActive: {
       color: theme.colors.primary,
       fontWeight: 'bold',
+    },
+    loadingBubble: {
+      maxWidth: '60%',
+    },
+    loadingContent: {
+      alignItems: 'center',
+      gap: 10,
+    },
+    loadingDots: {
+      flexDirection: 'row',
+      gap: 4,
+    },
+    loadingDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    progressContainer: {
+      width: '100%',
+      alignItems: 'center',
+      gap: 4,
+    },
+    progressBar: {
+      width: '100%',
+      height: 4,
+      backgroundColor: theme.colors.border,
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: theme.colors.primary,
+      borderRadius: 2,
+    },
+    progressText: {
+      fontSize: 12,
+      color: theme.colors.text,
+    },
+    messagesContainer: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      height: '100%',
+    },
+    messagesList: {
+      flex: 1,
+      overflow: 'scroll',
+      paddingLeft: 10,
+      paddingRight: 10,
     },
   });
 };

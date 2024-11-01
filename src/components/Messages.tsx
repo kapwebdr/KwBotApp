@@ -1,7 +1,8 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, FlatList } from 'react-native';
 import { useConversation } from '../contexts/ConversationContext';
 import { MessageBubble } from './MessageBubble';
+import { LoadingBubble } from './LoadingBubble';
 import { createStyles } from '../styles/theme.styles';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTool } from '../hooks/useTool';
@@ -10,12 +11,15 @@ export const Messages: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const { messages } = useConversation();
-  const { isGenerating, tool } = useTool();
+  const { 
+    isGenerating, 
+    loading, 
+    tool,
+    isModelLoading,
+    modelLoadingProgress,
+    modelLoadingStatus 
+  } = useTool();
   const flatListRef = useRef<FlatList>(null);
-  
-  const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
-  const [dots, setDots] = useState('');
-  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const scrollToBottom = () => {
     if (flatListRef.current) {
@@ -33,78 +37,52 @@ export const Messages: React.FC = () => {
   };
 
   useEffect(() => {
-    const timer = setTimeout(scrollToBottom, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, loading.isLoading, isModelLoading]);
 
-  useEffect(() => {
-    if (isGenerating) {
-      const interval = setInterval(scrollToBottom, 500);
-      return () => clearInterval(interval);
-    }
-  }, [isGenerating]);
+  const renderMessages = () => {
+    const messageComponents = messages.map((message, index) => (
+      <MessageBubble
+        key={`message-${index}`}
+        message={message}
+        isGenerating={isGenerating && index === messages.length - 1}
+        loadingProgress={loading.progress}
+        loadingStatus={loading.status}
+        loadingType={loading.type}
+      />
+    ));
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isWaitingFirstResponse) {
-      interval = setInterval(() => {
-        setDots(prev => prev.length >= 3 ? '' : prev + '.');
-      }, 500);
+    if (loading.isLoading && loading.type === 'model') {
+      messageComponents.push(
+        <LoadingBubble
+          key="model-loading"
+          type="model"
+          progress={loading.progress}
+          status={loading.status}
+          message={modelLoadingStatus}
+        />
+      );
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isWaitingFirstResponse]);
+
+    return messageComponents;
+  };
+
+  const bottomPadding = tool?.configFields?.length ? 230 : 100;
 
   return (
-    <View style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      height: '100%',
-      paddingBottom: tool?.configFields ? 230 : 100, // Ajustement dynamique selon la présence de configFields
-    }}>
+    <View style={[styles.messagesContainer, { paddingBottom: bottomPadding }]}>
       <FlatList
         ref={flatListRef}
-        data={messages}
-        keyExtractor={(item, index) => `message-${index}`}
-        renderItem={({ item }) => (
-          <MessageBubble
-            message={item}
-            isGenerating={isGenerating}
-            loadingProgress={loadingProgress}
-            dots={dots}
-            isWaitingFirstResponse={isWaitingFirstResponse}
-          />
-        )}
-        style={{
-          flex: 1,
-          overflow: 'auto',
-        }}
-        contentContainerStyle={{
-          padding: 10,
-          flexGrow: 1,
-        }}
+        data={renderMessages()}
+        renderItem={({ item }) => item}
+        keyExtractor={(_, index) => `message-${index}`}
+        style={styles.messagesList}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 10,
         }}
-        removeClippedSubviews={false}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={21}
-        updateCellsBatchingPeriod={50}
-        onEndReachedThreshold={0.5}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={scrollToBottom}
-        ListEmptyComponent={null}
       />
     </View>
   );
