@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { ToolType, ToolConfig, Message } from '../types';
+import React, { createContext, useState, useEffect, useMemo } from 'react';
+import { ToolType, ToolConfig, Message, ToolConfigField, ToolAction } from '../types';
 import { TOOLS } from '../types';
 import { 
   streamChatCompletion, 
@@ -14,6 +14,8 @@ import {
   loadModel
 } from '../services/api';
 import { useConversation } from './ConversationContext';
+import { toolConfigsStorage } from '../services/storage';
+import { ApiHandler } from '../services/apiHandler';
 
 interface ToolContextType {
   currentTool: ToolType;
@@ -24,7 +26,6 @@ interface ToolContextType {
   isToolMenuOpen: boolean;
   setIsToolMenuOpen: (isOpen: boolean) => void;
   isGenerating: boolean;
-  setIsGenerating: (isGenerating: boolean) => void;
   input: string;
   setInput: (input: string) => void;
   availableModels: string[];
@@ -44,6 +45,12 @@ interface ImageModel {
   type: string;
 }
 
+interface ToolState {
+  config: ToolConfig;
+  loadedModel?: string;
+  isModelLoaded: boolean;
+}
+
 export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentTool, setCurrentTool] = useState<ToolType>('chat');
   const [toolConfig, setToolConfig] = useState<ToolConfig>({});
@@ -56,142 +63,87 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [modelLoadingProgress, setModelLoadingProgress] = useState(0);
   const [modelLoadingStatus, setModelLoadingStatus] = useState('');
-  const [currentLoadedModel, setCurrentLoadedModel] = useState<string | null>(null);
+  const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const [loadedModels, setLoadedModels] = useState<Record<string, string>>({});
-  const [modelStates, setModelStates] = useState<Record<string, {
-    model: string | undefined;
-    isLoaded: boolean;
-  }>>({});
 
   const { messages, setMessages, systemMessage } = useConversation();
 
-  // Log des changements de tool
+  // Initialisation des états des outils et chargement des modèles
   useEffect(() => {
-    const tool = TOOLS.find(t => t.id === currentTool);
-    console.group('Tool Change Debug');
-    console.log('Current Tool:', {
-      id: tool?.id,
-      label: tool?.label,
-      features: tool?.features,
-      configFields: tool?.configFields,
-      defaultConfig: tool?.defaultConfig
-    });
-    console.log('Current Config:', toolConfig);
-    console.groupEnd();
-  }, [currentTool, toolConfig]);
+    const initializeTools = async () => {
+      try {
+        const models = await getAvailableModels();
+        const imgModels = await getImageModels();
+        setAvailableModels(models);
+        setImageModels(imgModels);
 
-  // Charger les configurations initiales du tool
-  useEffect(() => {
-    const loadToolConfigs = async () => {
-      const models = await getAvailableModels();
-      const imgModels = await getImageModels();
-      setAvailableModels(models);
-      setImageModels(imgModels);
-
-      const tool = TOOLS.find(t => t.id === currentTool);
-      if (tool) {
-        console.group('Tool Config Initialization');
-        console.log('Loading config for tool:', tool.id);
-        console.log('Default config:', tool.defaultConfig);
-        console.log('Available models:', models);
-        console.log('Available image models:', imgModels);
-        console.groupEnd();
-        
-        const defaultConfig = {
-          ...tool.defaultConfig,
-          modelType: tool.id === 'image-generation' ? (imgModels[0]?.id || 'sdxl/turbo') : undefined
-        };
-        
-        setToolConfig(defaultConfig);
+        const states: Partial<Record<ToolType, ToolState>> = {};
+        for (const tool of TOOLS) {
+          const savedConfig = await toolConfigsStorage.load();
+          const toolConfig = savedConfig?.[tool.id];
+          states[tool.id] = {
+            config: {
+              ...tool.defaultConfig,
+              ...toolConfig
+            },
+            isModelLoaded: false
+          };
+        }
+        setToolStates(states as Record<ToolType, ToolState>);
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation des outils:', error);
       }
     };
 
-    loadToolConfigs();
-  }, [currentTool]);
+    initializeTools();
+  }, []);
 
-  // Gérer les configurations des selects pour chaque tool
-  const selectConfigs = {
-    model: {
-      value: toolConfig.model || '',
-      options: availableModels,
-      isLoading: false,
-      onChange: (value: string) => updateToolConfig({ model: value })
-    },
-    modelType: {
-      value: toolConfig.modelType || 'sdxl/turbo',
-      options: imageModels
-        .filter(model => model.type === 'text2image')
-        .map(model => ({
-          value: model.id,
-          label: model.name
-        })),
-      onChange: (value: string) => updateToolConfig({ modelType: value })
-    },
-    fromLang: {
-      value: toolConfig.fromLang || 'fr',
-      options: ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'ru', 'zh', 'ja', 'ko'],
-      onChange: (value: string) => updateToolConfig({ fromLang: value })
-    },
-    toLang: {
-      value: toolConfig.toLang || 'en',
-      options: ['en', 'fr', 'es', 'de', 'it', 'pt', 'nl', 'ru', 'zh', 'ja', 'ko'],
-      onChange: (value: string) => updateToolConfig({ toLang: value })
+  // Mise à jour de la configuration actuelle lors du changement d'outil
+  useEffect(() => {
+    const toolState = toolStates[currentTool];
+    if (toolState) {
+      setToolConfig(toolState.config);
+      setIsModelLoaded(toolState.isModelLoaded);
     }
-  };
+  }, [currentTool, toolStates]);
 
+  // Sauvegarde automatique des configurations
   const updateToolConfig = (config: Partial<ToolConfig>) => {
-    console.group('Tool Config Update');
-    console.log('Previous config:', toolConfig);
-    console.log('New config update:', config);
-    console.groupEnd();
-
-    setToolConfig(prev => ({
+    const newConfig = { ...toolConfig, ...config };
+    setToolConfig(newConfig);
+    
+    setToolStates(prev => ({
       ...prev,
-      ...config
+      [currentTool]: {
+        ...prev[currentTool],
+        config: newConfig
+      }
+    }));
+
+    toolConfigsStorage.update(prevConfigs => ({
+      ...prevConfigs,
+      [currentTool]: newConfig
     }));
   };
 
-  // Mise à jour du modèle chargé quand on change d'outil
-  useEffect(() => {
-    const savedState = modelStates[currentTool];
-    if (savedState) {
-      setToolConfig(prev => ({
-        ...prev,
-        model: savedState.model
-      }));
-      setIsModelLoaded(savedState.isLoaded);
-      setCurrentLoadedModel(savedState.model || null);
-    } else {
-      // Réinitialiser si pas d'état sauvegardé pour cet outil
-      setIsModelLoaded(false);
-      setCurrentLoadedModel(null);
-    }
-  }, [currentTool]);
-
-  // Sauvegarder l'état du modèle quand il change
-  useEffect(() => {
-    if (currentTool) {
-      setModelStates(prev => ({
-        ...prev,
-        [currentTool]: {
-          model: toolConfig.model,
-          isLoaded: isModelLoaded
-        }
-      }));
-    }
-  }, [currentTool, toolConfig.model, isModelLoaded]);
+  const updateToolState = (toolId: ToolType, updates: Partial<ToolState>) => {
+    setToolStates(prev => ({
+      ...prev,
+      [toolId]: {
+        ...prev[toolId],
+        ...updates
+      }
+    }));
+  };
 
   const loadSelectedModel = async (modelName: string) => {
-    // Si le modèle est déjà chargé pour cet outil, pas besoin de le recharger
-    if (loadedModels[currentTool] === modelName) {
-      setIsModelLoaded(true);
-      setCurrentLoadedModel(modelName);
-      updateToolConfig({ model: modelName });
+    if (!modelName) return;
+
+    const currentState = toolStates[currentTool];
+    if (currentState?.loadedModel === modelName && currentState.isModelLoaded) {
       return;
     }
-    
-    setIsModelLoaded(false);
+
     setIsModelLoading(true);
     setModelLoadingProgress(0);
     setModelLoadingStatus('Chargement du modèle...');
@@ -205,23 +157,33 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         (status) => {
           setModelLoadingStatus(status);
           if (status === 'loaded') {
-            setIsModelLoaded(true);
-            // Sauvegarder le modèle chargé pour cet outil
-            setLoadedModels(prev => ({
+            setToolStates(prev => ({
               ...prev,
-              [currentTool]: modelName
+              [currentTool]: {
+                ...prev[currentTool],
+                loadedModel: modelName,
+                isModelLoaded: true
+              }
             }));
+            setIsModelLoaded(true);
           }
         }
       );
 
       if (success) {
-        setCurrentLoadedModel(modelName);
         updateToolConfig({ model: modelName });
       } else {
         setModelLoadingStatus('Échec du chargement du modèle');
         updateToolConfig({ model: undefined });
         setIsModelLoaded(false);
+        setToolStates(prev => ({
+          ...prev,
+          [currentTool]: {
+            ...prev[currentTool],
+            loadedModel: undefined,
+            isModelLoaded: false
+          }
+        }));
       }
     } catch (error) {
       console.error('Erreur lors du chargement du modèle:', error);
@@ -233,261 +195,185 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const handleChatAction = async () => {
-    if (!input.trim() || isGenerating) return;
-    if (!toolConfig.model) {
-      console.error('Aucun modèle sélectionné');
-      return;
+  // Charger automatiquement le modèle quand il est sélectionné
+  useEffect(() => {
+    const selectedModel = toolConfig.model;
+    if (selectedModel && !isModelLoading) {
+      loadSelectedModel(selectedModel);
     }
-    if (isModelLoading) {
-      console.error('Le modèle est en cours de chargement');
-      return;
-    }
-    if (!isModelLoaded) {
-      console.error('Le modèle n\'est pas encore chargé');
-      return;
+  }, [toolConfig.model]);
+
+  const handleError = (error: Error, errorMessage?: string) => {
+    console.error(errorMessage || error.message, error);
+  };
+
+  const api = new ApiHandler(process.env.BASE_API_URL || '');
+
+  const validateToolAction = (toolAction: ToolAction): boolean => {
+    if (toolAction.requiresInput && !input.trim()) {
+      handleError(new Error(toolAction.errorMessages?.noInput));
+      return false;
     }
 
-    const newMessages = [
-      ...messages,
-      { role: 'human', content: input } as Message,
-    ];
-    setMessages(newMessages);
-    setInput('');
+    if (toolAction.requiresModel && !toolConfig.model) {
+      handleError(new Error(toolAction.errorMessages?.noModel));
+      return false;
+    }
 
-    try {
-      setIsGenerating(true);
-      const aiMessage: Message = {
-        role: 'assistant',
-        content: '...',
-      };
-      setMessages([...newMessages, aiMessage]);
-      setIsWaitingFirstResponse(true);
+    if (toolAction.requiresModelLoaded && !isModelLoaded) {
+      handleError(new Error(toolAction.errorMessages?.modelNotLoaded));
+      return false;
+    }
 
-      await streamChatCompletion(
-        toolConfig.model || availableModels[0],
-        newMessages,
-        systemMessage,
-        (chunk) => {
-          if (isWaitingFirstResponse) {
-            setIsWaitingFirstResponse(false);
-          }
-          aiMessage.content = isWaitingFirstResponse ? chunk : aiMessage.content + chunk;
-          setMessages([...newMessages, { ...aiMessage }]);
+    if (isGenerating) {
+      handleError(new Error(toolAction.errorMessages?.generating));
+      return false;
+    }
+
+    return true;
+  };
+
+  const formatResponse = (action: ToolAction, result: any): string => {
+    switch (action.type) {
+      case 'send':
+        return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+      case 'upload':
+        if (result.base64) {
+          return `![Image](data:image/png;base64,${result.base64})`;
         }
-      );
-    } catch (error) {
-      console.error('Erreur lors de l\'appel à l\'API:', error);
-    } finally {
-      setIsWaitingFirstResponse(false);
-      setIsGenerating(false);
+        return JSON.stringify(result, null, 2);
+      default:
+        return JSON.stringify(result, null, 2);
     }
   };
 
-  const handleImageGeneration = async () => {
-    if (!input.trim() || isGenerating) return;
-
-    try {
-      setIsGenerating(true);
-      const defaultImageModel = imageModels.find(m => m.type === 'text2image')?.id || 'sdxl/turbo';
-      
-      await generateImage(
-        {
-          model_type: toolConfig.modelType || defaultImageModel,
-          prompt: input,
-          width: toolConfig.width || 1024,
-          height: toolConfig.height || 1024,
-          steps: toolConfig.steps || 20,
-        },
-        (progress) => {
-          setLoadingProgress(progress);
-        },
-        (imageBase64) => {
-          setMessages([
-            ...messages,
-            { role: 'human', content: input },
-            { role: 'assistant', content: `![Generated Image](data:image/png;base64,${imageBase64})` }
-          ]);
-        }
-      );
-      setInput('');
-    } catch (error) {
-      console.error('Erreur lors de la génération d\'image:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleImageAnalysis = async (imageBase64: string) => {
-    try {
-      setIsGenerating(true);
-      const result = await analyzeImage({
-        image: imageBase64,
-        labels: toolConfig.labels || ['chat', 'chien', 'oiseau', 'personne', 'voiture']
-      });
-
-      setMessages([
-        ...messages,
-        { 
-          role: 'human', 
-          content: `![Analyzed Image](data:image/png;base64,${imageBase64})`
-        },
-        {
-          role: 'assistant',
-          content: `Résultats de l'analyse:\n${JSON.stringify(result, null, 2)}`
-        }
-      ]);
-    } catch (error) {
-      console.error('Erreur lors de l\'analyse d\'image:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleOCR = async (imageBase64: string) => {
-    try {
-      setIsGenerating(true);
-      const result = await extractTextFromImage({
-        image: imageBase64
-      });
-
-      setMessages([
-        ...messages,
-        { 
-          role: 'human', 
-          content: `![OCR Image](data:image/png;base64,${imageBase64})`
-        },
-        {
-          role: 'assistant',
-          content: `Texte extrait:\n${result.text}`
-        }
-      ]);
-    } catch (error) {
-      console.error('Erreur lors de l\'extraction de texte:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleImageRefinement = async (imageBase64: string) => {
-    if (!input.trim() || isGenerating) return;
-
-    try {
-      setIsGenerating(true);
-      await refineImage(
-        {
-          image: imageBase64,
-          prompt: input,
-          strength: toolConfig.strength || 0.3,
-          steps: toolConfig.steps || 20,
-        },
-        (progress) => {
-          setLoadingProgress(progress);
-        },
-        (refinedImageBase64) => {
-          setMessages([
-            ...messages,
-            { 
-              role: 'human', 
-              content: `![Original Image](data:image/png;base64,${imageBase64})\n\n${input}`
-            },
-            {
-              role: 'assistant',
-              content: `![Refined Image](data:image/png;base64,${refinedImageBase64})`
-            }
-          ]);
-        }
-      );
-      setInput('');
-    } catch (error) {
-      console.error('Erreur lors du raffinement d\'image:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleTranslation = async () => {
-    if (!input.trim() || isGenerating) return;
-
-    try {
-      setIsGenerating(true);
-      const result = await translateText({
-        text: input,
-        from_lang: toolConfig.fromLang || 'fr',
-        to_lang: toolConfig.toLang || 'en'
-      });
-
-      setMessages([
-        ...messages,
-        { role: 'human', content: input },
-        { 
-          role: 'assistant', 
-          content: `Traduction (${result.from} → ${result.to}):\n\n${result.translated_text}`
-        }
-      ]);
-      setInput('');
-    } catch (error) {
-      console.error('Erreur lors de la traduction:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleToolAction = async (action: string, ...args: any[]) => {
+  const handleToolAction = async (actionType: string, ...args: any[]) => {
     const tool = TOOLS.find(t => t.id === currentTool);
-    console.group('Tool Action Debug');
-    console.log('Action:', action);
-    console.log('Tool:', tool?.id);
-    console.log('Args:', args);
-    console.groupEnd();
-
     if (!tool) return;
 
-    switch (action) {
-      case 'send':
-        switch (currentTool) {
-          case 'chat':
-            await handleChatAction();
-            break;
-          case 'image-generation':
-            await handleImageGeneration();
-            break;
-          case 'translation':
-            await handleTranslation();
-            break;
-        }
-        break;
+    const toolAction = tool.actions?.find(a => a.type === actionType);
+    if (!toolAction) return;
 
-      case 'upload':
-        const [file] = args;
-        const base64Content = file.base64.split(',')[1];
-        
-        switch (currentTool) {
-          case 'image-analysis':
-            await handleImageAnalysis(base64Content);
-            break;
-          case 'ocr':
-            await handleOCR(base64Content);
-            break;
-          case 'image-refine':
-            await handleImageRefinement(base64Content);
-            break;
-        }
-        break;
+    if (!validateToolAction(toolAction)) return;
 
-      case 'stop':
-        if (isGenerating) {
-          const success = await stopGeneration();
-          if (success) {
-            setIsGenerating(false);
-            setIsWaitingFirstResponse(false);
+    try {
+      setIsGenerating(true);
+      
+      const params = {
+        ...toolConfig,
+        input,
+        messages,
+        systemMessage,
+        ...args[0]
+      };
+
+      // Gestion spéciale pour le chat qui nécessite un streaming
+      if (currentTool === 'chat') {
+        const newMessages = [
+          ...messages,
+          { role: 'human', content: input } as Message,
+        ];
+        setMessages(newMessages);
+        setInput('');
+
+        const aiMessage: Message = {
+          role: 'assistant',
+          content: '...',
+        };
+        setMessages([...newMessages, aiMessage]);
+        setIsWaitingFirstResponse(true);
+
+        await api.executeToolAction(
+          currentTool,
+          actionType,
+          params,
+          (progress) => setModelLoadingProgress(progress),
+          (chunk) => {
+            if (isWaitingFirstResponse) {
+              setIsWaitingFirstResponse(false);
+            }
+            aiMessage.content = isWaitingFirstResponse ? chunk : aiMessage.content + chunk;
+            setMessages([...newMessages, { ...aiMessage }]);
           }
+        );
+      } else {
+        // Gestion standard pour les autres outils
+        const result = await api.executeToolAction(
+          currentTool,
+          actionType,
+          params,
+          (progress) => setModelLoadingProgress(progress),
+          (result) => {
+            handleActionResult(toolAction, result);
+          }
+        );
+
+        if (!toolAction.api?.streaming) {
+          handleActionResult(toolAction, result);
         }
-        break;
+        setInput('');
+      }
+    } catch (error) {
+      handleError(error as Error, toolAction.errorMessages?.apiError);
+    } finally {
+      setIsGenerating(false);
+      setIsWaitingFirstResponse(false);
     }
   };
 
-  const value = {
+  const handleActionResult = (action: ToolAction, result: any) => {
+    const newMessages = [
+      ...messages,
+      { role: 'human', content: input },
+      { role: 'assistant', content: formatResponse(action, result) }
+    ];
+    setMessages(newMessages);
+  };
+
+  const getSelectConfigForField = (field: ToolConfigField) => {
+    const currentValue = toolConfig[field.name];
+    
+    switch (field.name) {
+      case 'model':
+        return {
+          value: currentValue || field.defaultValue || '',
+          options: availableModels,
+          isLoading: field.loading && isModelLoading,
+          onChange: loadSelectedModel
+        };
+      case 'modelType':
+        return {
+          value: currentValue || field.defaultValue || '',
+          options: imageModels
+            .filter(model => model.type === 'text2image')
+            .map(model => ({
+              value: model.id,
+              label: model.name
+            })),
+          onChange: (value: string) => updateToolConfig({ [field.name]: value })
+        };
+      default:
+        return {
+          value: currentValue || field.defaultValue || '',
+          options: field.options || [],
+          onChange: (value: string) => updateToolConfig({ [field.name]: value })
+        };
+    }
+  };
+
+  const selectConfigs = useMemo(() => {
+    const tool = TOOLS.find(t => t.id === currentTool);
+    if (!tool?.configFields) return {};
+
+    return tool.configFields.reduce((configs, field) => {
+      if (field.type === 'select') {
+        configs[field.name] = getSelectConfigForField(field);
+      }
+      return configs;
+    }, {} as Record<string, any>);
+  }, [currentTool, toolConfig, availableModels, imageModels, isModelLoading]);
+
+  const value: ToolContextType = {
     currentTool,
     setCurrentTool,
     toolConfig,
@@ -496,7 +382,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isToolMenuOpen,
     setIsToolMenuOpen,
     isGenerating,
-    setIsGenerating,
     input,
     setInput,
     availableModels,

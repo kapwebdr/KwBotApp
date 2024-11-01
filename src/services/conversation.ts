@@ -1,27 +1,19 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import uuid from 'react-native-uuid';
 import { Conversation, Message } from '../types';
+import { conversationsStorage } from './storage';
 
 export const conversationService = {
   async loadConversations(): Promise<Conversation[]> {
-    try {
-      const storedConversations = await AsyncStorage.getItem('conversations');
-      if (storedConversations) {
-        return JSON.parse(storedConversations);
-      }
-      return [];
-    } catch (error) {
-      console.error('Erreur lors du chargement des conversations:', error);
-      return [];
-    }
+    const conversations = await conversationsStorage.load();
+    return Array.isArray(conversations) ? conversations : [];
   },
 
   async saveConversations(conversations: Conversation[]): Promise<void> {
-    try {
-      await AsyncStorage.setItem('conversations', JSON.stringify(conversations));
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des conversations:', error);
+    if (!Array.isArray(conversations)) {
+      console.error('saveConversations: conversations doit être un tableau');
+      return;
     }
+    await conversationsStorage.save(conversations);
   },
 
   createNewConversation(systemMessage: string): Conversation {
@@ -33,13 +25,18 @@ export const conversationService = {
     };
   },
 
-  updateConversation(
+  async updateConversation(
     conversations: Conversation[],
     conversationId: string,
     messages: Message[],
     systemMessage?: string
-  ): Conversation[] {
-    return conversations.map(conv =>
+  ): Promise<Conversation[]> {
+    if (!Array.isArray(conversations)) {
+      console.error('updateConversation: conversations doit être un tableau');
+      return [];
+    }
+
+    const updatedConversations = conversations.map(conv =>
       conv.id === conversationId
         ? { 
             ...conv, 
@@ -49,5 +46,8 @@ export const conversationService = {
           }
         : conv
     );
+
+    await this.saveConversations(updatedConversations);
+    return updatedConversations;
   }
 }; 

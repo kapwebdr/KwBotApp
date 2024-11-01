@@ -195,6 +195,8 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
           const transcript = event.results[0][0].transcript;
           setInput(transcript);
           setIsListening(false);
+          // Envoyer automatiquement le message après la reconnaissance
+          setTimeout(() => handleSend(), 100);
         };
 
         speechRecognition.current.onerror = (event) => {
@@ -211,6 +213,8 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
       Voice.onSpeechResults = (e: SpeechResultsEvent) => {
         if (e.value) {
           setInput(e.value[0]);
+          // Envoyer automatiquement le message après la reconnaissance
+          setTimeout(() => handleSend(), 100);
         }
         setIsListening(false);
       };

@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Theme } from './types';
+import { Theme, ThemeType } from './types';
+import { themeStorage } from './services/storage';
 
 export const lightTheme: Theme = {
   colors: {
@@ -85,25 +85,145 @@ export const darkTheme: Theme = {
   },
 };
 
-const THEME_STORAGE_KEY = 'app_theme';
-
-export const getTheme = async (): Promise<Theme> => {
-  try {
-    const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-    if (savedTheme === 'dark') {
-      return darkTheme;
-    }
-    return lightTheme;
-  } catch (error) {
-    console.error('Erreur lors de la récupération du thème:', error);
-    return lightTheme;
-  }
+export const dimTheme: Theme = {
+  colors: {
+    primary: '#4A90E2',
+    background: '#15202B',
+    text: '#FFFFFF',
+    userBubble: '#4A90E2',
+    aiBubble: '#2A2B2E',
+    userText: '#15202B',
+    aiText: '#E0E0E0',
+    inputBackground: '#2A2B2E',
+    border: '#3A3B3E',
+    gray0: '#15202B',
+    gray25: '#1E1F22',
+    gray50: '#222326',
+    gray75: '#26272A',
+    gray100: '#2A2B2E',
+    gray150: '#2E2F32',
+    gray200: '#323336',
+    gray250: '#36373A',
+    gray300: '#3A3B3E',
+    gray350: '#3E3F42',
+    gray400: '#424346',
+    gray450: '#46474A',
+    gray500: '#4A4B4E',
+    gray550: '#4E4F52',
+    gray600: '#525356',
+    gray650: '#56575A',
+    gray700: '#5A5B5E',
+    gray750: '#5E5F62',
+    gray800: '#626366',
+    gray850: '#66676A',
+    gray900: '#6A6B6E',
+    gray950: '#6E6F72',
+    gray1000: '#727376',
+  },
+  fontSizes: {
+    small: 12,
+    medium: 14,
+    large: 16,
+  },
 };
 
-export const saveTheme = async (isDark: boolean): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde du thème:', error);
-  }
+export const oceanTheme: Theme = {
+  colors: {
+    primary: '#00B4D8',
+    background: '#03045E',
+    text: '#CAF0F8',
+    userBubble: '#00B4D8',
+    aiBubble: '#2A2B2E',
+    userText: '#03045E',
+    aiText: '#E0E0E0',
+    inputBackground: '#2A2B2E',
+    border: '#3A3B3E',
+    gray0: '#03045E',
+    gray25: '#1E1F22',
+    gray50: '#222326',
+    gray75: '#26272A',
+    gray100: '#2A2B2E',
+    gray150: '#2E2F32',
+    gray200: '#323336',
+    gray250: '#36373A',
+    gray300: '#3A3B3E',
+    gray350: '#3E3F42',
+    gray400: '#424346',
+    gray450: '#46474A',
+    gray500: '#4A4B4E',
+    gray550: '#4E4F52',
+    gray600: '#525356',
+    gray650: '#56575A',
+    gray700: '#5A5B5E',
+    gray750: '#5E5F62',
+    gray800: '#626366',
+    gray850: '#66676A',
+    gray900: '#6A6B6E',
+    gray950: '#6E6F72',
+    gray1000: '#727376',
+  },
+  fontSizes: {
+    small: 12,
+    medium: 14,
+    large: 16,
+  },
+};
+
+export const forestTheme: Theme = {
+  colors: {
+    primary: '#2D6A4F',
+    background: '#081C15',
+    text: '#D8F3DC',
+    userBubble: '#2D6A4F',
+    aiBubble: '#2A2B2E',
+    userText: '#081C15',
+    aiText: '#E0E0E0',
+    inputBackground: '#2A2B2E',
+    border: '#3A3B3E',
+    gray0: '#081C15',
+    gray25: '#1E1F22',
+    gray50: '#222326',
+    gray75: '#26272A',
+    gray100: '#2A2B2E',
+    gray150: '#2E2F32',
+    gray200: '#323336',
+    gray250: '#36373A',
+    gray300: '#3A3B3E',
+    gray350: '#3E3F42',
+    gray400: '#424346',
+    gray450: '#46474A',
+    gray500: '#4A4B4E',
+    gray550: '#4E4F52',
+    gray600: '#525356',
+    gray650: '#56575A',
+    gray700: '#5A5B5E',
+    gray750: '#5E5F62',
+    gray800: '#626366',
+    gray850: '#66676A',
+    gray900: '#6A6B6E',
+    gray950: '#6E6F72',
+    gray1000: '#727376',
+  },
+  fontSizes: {
+    small: 12,
+    medium: 14,
+    large: 16,
+  },
+};
+
+export const themes: Record<ThemeType, Theme> = {
+  light: lightTheme,
+  dark: darkTheme,
+  dim: dimTheme,
+  system: lightTheme, // Par défaut, sera mis à jour selon le système
+  ocean: oceanTheme,
+  forest: forestTheme,
+};
+
+export const getTheme = async (): Promise<ThemeType> => {
+  return await themeStorage.load();
+};
+
+export const saveTheme = async (themeType: ThemeType): Promise<void> => {
+  await themeStorage.save(themeType);
 }; 

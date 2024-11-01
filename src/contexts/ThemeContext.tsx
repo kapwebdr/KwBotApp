@@ -1,50 +1,65 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Theme } from '../types';
-import { lightTheme, darkTheme, getTheme, saveTheme } from '../theme';
+import { Theme, ThemeType } from '../types';
+import { themes, getTheme, saveTheme } from '../theme';
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: () => Promise<void>;
-  isDark: boolean;
+  currentTheme: ThemeType;
+  setTheme: (themeType: ThemeType) => Promise<void>;
 }
 
-export const ThemeContext = createContext<ThemeContextType | null>(null);
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
-export const useTheme = () => {
+// Export explicite du hook useTheme
+export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-};
+}
 
 interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(lightTheme);
-  const [isDark, setIsDark] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>('light');
+  const [theme, setThemeObject] = useState<Theme>(themes.light);
 
   useEffect(() => {
     const loadSavedTheme = async () => {
       const savedTheme = await getTheme();
-      setTheme(savedTheme);
-      setIsDark(savedTheme === darkTheme);
+      if (savedTheme === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setThemeObject(prefersDark ? themes.dark : themes.light);
+      } else {
+        setThemeObject(themes[savedTheme]);
+      }
+      setCurrentTheme(savedTheme);
     };
     loadSavedTheme();
   }, []);
 
-  const toggleTheme = async () => {
-    const newIsDark = !isDark;
-    const newTheme = newIsDark ? darkTheme : lightTheme;
-    setIsDark(newIsDark);
-    setTheme(newTheme);
-    await saveTheme(newIsDark);
+  const setTheme = async (themeType: ThemeType) => {
+    setCurrentTheme(themeType);
+    if (themeType === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setThemeObject(prefersDark ? themes.dark : themes.light);
+    } else {
+      setThemeObject(themes[themeType]);
+    }
+    await saveTheme(themeType);
+  };
+
+  const value = {
+    theme,
+    currentTheme,
+    setTheme
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

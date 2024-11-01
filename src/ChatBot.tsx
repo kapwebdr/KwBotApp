@@ -13,6 +13,7 @@ import { useTheme } from './contexts/ThemeContext';
 import { BottomTabNavigator } from './navigation/BottomTabNavigator';
 import { SystemWebSocket, SystemMetrics } from './services/websocket';
 import { SystemStatus } from './components/SystemStatus';
+import { ThemeSelector } from './components/ThemeSelector';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -100,13 +101,7 @@ const ChatBot: React.FC = () => {
 
               <SystemStatus status={systemStatus} metrics={systemMetrics} />
 
-              <TouchableOpacity onPress={toggleTheme}>
-                <Ionicons 
-                  name={isDark ? "sunny" : "moon"} 
-                  size={24} 
-                  color={theme.colors.primary} 
-                />
-              </TouchableOpacity>
+              <ThemeSelector />
             </View>
 
             <View style={styles.mainContent}>

@@ -35,9 +35,8 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const loadInitialConversations = async () => {
       const loadedConversations = await conversationService.loadConversations();
-      setConversations(loadedConversations);
-      
-      if (loadedConversations.length > 0) {
+      if (Array.isArray(loadedConversations) && loadedConversations.length > 0) {
+        setConversations(loadedConversations);
         const lastConversation = loadedConversations[loadedConversations.length - 1];
         setCurrentConversationId(lastConversation.id);
         setMessages(lastConversation.messages);
@@ -49,17 +48,19 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     loadInitialConversations();
   }, []);
 
-  // Sauvegarder automatiquement quand les messages changent
+  // Sauvegarder uniquement quand les messages changent
   useEffect(() => {
     if (currentConversationId && messages.length > 0) {
-      const updatedConversations = conversationService.updateConversation(
-        conversations,
-        currentConversationId,
-        messages,
-        systemMessage
-      );
-      setConversations(updatedConversations);
-      conversationService.saveConversations(updatedConversations);
+      const saveConversation = async () => {
+        const updatedConversations = await conversationService.updateConversation(
+          conversations,
+          currentConversationId,
+          messages,
+          systemMessage
+        );
+        setConversations(updatedConversations);
+      };
+      saveConversation();
     }
   }, [messages, currentConversationId, systemMessage]);
 
@@ -86,39 +87,26 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const startNewConversation = async () => {
+  const startNewConversation = () => {
     const newConversation = conversationService.createNewConversation(systemMessage);
-    const updatedConversations = [newConversation, ...conversations];
-    setConversations(updatedConversations);
+    setConversations(prev => [newConversation, ...prev]);
     setCurrentConversationId(newConversation.id);
     setMessages([]);
-    await conversationService.saveConversations(updatedConversations);
   };
 
   const updateSystemMessage = (message: string) => {
     setSystemMessage(message);
-    if (currentConversationId) {
-      const updatedConversations = conversationService.updateConversation(
-        conversations,
-        currentConversationId,
-        messages,
-        message
-      );
-      setConversations(updatedConversations);
-      conversationService.saveConversations(updatedConversations);
-    }
   };
 
   const saveCurrentConversation = async () => {
     if (currentConversationId) {
-      const updatedConversations = conversationService.updateConversation(
+      const updatedConversations = await conversationService.updateConversation(
         conversations,
         currentConversationId,
         messages,
         systemMessage
       );
       setConversations(updatedConversations);
-      await conversationService.saveConversations(updatedConversations);
     }
   };
 
