@@ -6,6 +6,9 @@ import { createStyles, getSelectStyle } from '../styles/theme.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { useTool } from '../hooks/useTool';
 import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
+import FileUploadConfig from './FileUploadConfig';
+import { useLoading } from '../hooks/useLoading';
+
 interface ToolConfigComponentProps {
   tool: Tool;
   config: IToolConfig;
@@ -17,9 +20,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   config,
   onConfigChange,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
-  const { loading } = useTool();
   const styles = createStyles({ theme });
   const { 
     selectConfigs,
@@ -27,13 +28,11 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
     setInput,
     isGenerating,
     handleToolAction,
-    isModelLoading,
-    modelLoadingProgress,
-    modelLoadingStatus,
-    loadSelectedModel
-  } = useTool();
+    } = useTool();
+  const loading = useLoading();
   const [isListening, setIsListening] = useState(false);
   const speechRecognition = useRef<SpeechRecognition | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ name: string; file: File } | null>(null);
 
   const handleConfigChange = (name: string, value: any) => {
     onConfigChange({
@@ -46,33 +45,22 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const hasFileUpload = !!tool.features?.fileUpload;
   const hasUrlInput = !!tool.features?.urlInput;
 
-  const handleFileUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Convertir le fichier en base64
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
-      await handleToolAction('upload', {
-        base64,
-        name: file.name,
-        type: file.type
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUrlInput = () => {
-    handleToolAction('url');
-  };
-
-  const handleSend = () => {
-    handleToolAction('send');
+  const handleSend = async () => {
+    if (pendingFile) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        await handleToolAction('upload', {
+          base64,
+          name: pendingFile.name,
+          type: pendingFile.file.type
+        });
+        clearPendingFile();
+      };
+      reader.readAsDataURL(pendingFile.file);
+    } else if (input.trim()) {
+      handleToolAction('send');
+    }
   };
 
   const handleStop = () => {
@@ -96,17 +84,14 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
         const selectConfig = selectConfigs[field.name];
         if (selectConfig) {
           return (
-            <View style={styles.modelSelectContainer}>
+            <View style={styles.selectContainer}>
               <select
                 value={selectConfig.value}
                 onChange={(e) => {
-                  if (field.name === 'model') {
-                    loadSelectedModel(e.target.value);
-                  }
                   selectConfig.onChange(e.target.value);
                 }}
                 style={getSelectStyle({ theme }, selectConfig.isLoading)}
-                disabled={selectConfig.isLoading || isModelLoading}
+                disabled={selectConfig.isLoading || loading.isLoading}
               >
                 <option value="">Sélectionnez un modèle</option>
                 {Array.isArray(selectConfig.options) && selectConfig.options.map((option: string | { value: string; label: string }) => {
@@ -125,26 +110,12 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
                   }
                 })}
               </select>
-              {isModelLoading && (
-                <View style={styles.modelLoadingContainer}>
-                  <Text style={styles.modelLoadingStatus}>{modelLoadingStatus}</Text>
-                  <View style={styles.progressBar}>
-                    <View 
-                      style={[
-                        styles.progressFill,
-                        { width: `${modelLoadingProgress}%` }
-                      ]} 
-                    />
-                  </View>
-                </View>
-              )}
               <Ionicons 
-                name={isModelLoading ? "reload" : "chevron-down"} 
+                name={loading.isLoading ? "reload" : "chevron-down"} 
                 size={16} 
                 color={theme.colors.text}
                 style={[
-                  styles.modelSelectIcon,
-                  isModelLoading && styles.modelSelectIconSpinning
+                  styles.selectIcon
                 ]}
               />
             </View>
@@ -280,6 +251,14 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
     }
   };
 
+  const handleFileSelect = (file: File) => {
+    setPendingFile({ name: file.name, file });
+  };
+
+  const clearPendingFile = () => {
+    setPendingFile(null);
+  };
+
   if (!tool.configFields && !hasPromptInput && !hasFileUpload && !hasUrlInput) {
     return null;
   }
@@ -296,100 +275,55 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
         )}
 
         <View style={styles.inputBarWrapper}>
-          {(hasFileUpload || hasUrlInput) && (
-            <View style={styles.uploadContainer}>
-              {hasFileUpload && (
-                <>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                    accept={tool.features?.fileUpload?.accept?.join(',')}
-                    multiple={tool.features?.fileUpload?.multiple}
-                  />
-                  <TouchableOpacity 
-                    style={styles.uploadButton}
-                    onPress={handleFileUploadClick}
-                  >
-                    <Ionicons 
-                      name="cloud-upload" 
-                      size={24} 
-                      color={theme.colors.primary} 
-                    />
-                  </TouchableOpacity>
-                </>
-              )}
-              {hasUrlInput && (
-                <TouchableOpacity 
-                  style={styles.uploadButton}
-                  onPress={handleUrlInput}
-                >
-                  <Ionicons 
-                    name="link" 
-                    size={24} 
-                    color={theme.colors.primary} 
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {hasPromptInput && (
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.input, isGenerating && styles.inputDisabled]}
-                value={input}
-                onChangeText={setInput}
-                placeholder={tool.features?.promptInput?.placeholder || "Tapez votre message..."}
-                placeholderTextColor={theme.colors.text}
-                multiline={tool.features?.promptInput?.multiline}
-                editable={!isGenerating}
-              />
-              <TouchableOpacity 
-                style={[
-                  styles.voiceButton,
-                  isListening && styles.voiceButtonActive
-                ]}
-                onPress={isListening ? stopVoiceRecognition : startVoiceRecognition}
-                disabled={isGenerating}
-              >
-                <Ionicons 
-                  name={isListening ? "mic" : "mic-outline"} 
-                  size={24} 
-                  color={isGenerating ? "#999" : theme.colors.primary}
+          <View style={styles.inputContainer}>
+            <FileUploadConfig
+              tool={tool}
+              onFileSelect={handleFileSelect}
+              pendingFile={pendingFile}
+              onClearFile={clearPendingFile}
+            />
+            {hasPromptInput && (
+              <>
+                <TextInput
+                  style={[styles.input, isGenerating && styles.inputDisabled]}
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder={tool.features?.promptInput?.placeholder || "Tapez votre message..."}
+                  placeholderTextColor={theme.colors.text}
+                  multiline={tool.features?.promptInput?.multiline}
+                  editable={!isGenerating}
                 />
-              </TouchableOpacity>
-
-              {isGenerating ? (
-                <TouchableOpacity 
-                  style={[styles.sendButton, styles.stopButton]}
-                  onPress={handleStop}
-                >
-                  <Ionicons 
-                    name="stop" 
-                    size={24} 
-                    color="red"
-                  />
-                </TouchableOpacity>
-              ) : (
                 <TouchableOpacity 
                   style={[
-                    styles.sendButton, 
-                    (!input.trim() || isGenerating) && styles.sendButtonDisabled
+                    styles.voiceButton,
+                    isListening && styles.voiceButtonActive
                   ]}
-                  onPress={handleSend}
-                  disabled={!input.trim() || isGenerating}
+                  onPress={isListening ? stopVoiceRecognition : startVoiceRecognition}
+                  disabled={isGenerating}
                 >
                   <Ionicons 
-                    name="send" 
-                    size={24} 
-                    color={!input.trim() || isGenerating ? "#999" : theme.colors.primary}
+                    name={isListening ? "mic" : "mic-outline"} 
+                    size={styles.buttonIcon.size}
+                    color={isGenerating ? theme.colors.gray400 : theme.colors.primary}
                   />
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
+              </>
+            )}
+            <TouchableOpacity 
+              style={[
+                styles.sendButton,
+                isGenerating ? styles.stopButton : (!input.trim() && !pendingFile) && styles.sendButtonDisabled
+              ]}
+              onPress={isGenerating ? handleStop : handleSend}
+              disabled={!isGenerating && (!input.trim() && !pendingFile)}
+            >
+              <Ionicons 
+                name={isGenerating ? "stop" : "send"}
+                size={styles.buttonIcon.size}
+                color={isGenerating ? "red" : (!input.trim() && !pendingFile) ? theme.colors.gray400 : theme.colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>

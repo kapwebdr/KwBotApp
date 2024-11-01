@@ -13,19 +13,33 @@ export const PendingFile: React.FC<PendingFileProps> = ({
   fileName,
   onClear,
 }) => {
-  const theme = useTheme();
-  const styles = createStyles(theme);
+  const { theme } = useTheme();
+  const styles = createStyles({ theme });
 
   return (
-    <View style={styles.pendingFileContainer}>
-      <Text style={styles.pendingFileName} numberOfLines={1} ellipsizeMode="middle">
+    <View style={[
+      styles.pendingFileContainer,
+      { backgroundColor: `${theme.colors.primary}20` }
+    ]}>
+      <Text 
+        style={[
+          styles.pendingFileName,
+          { color: theme.colors.text }
+        ]} 
+        numberOfLines={1} 
+        ellipsizeMode="middle"
+      >
         {fileName}
       </Text>
       <TouchableOpacity 
         style={styles.clearFileButton}
         onPress={onClear}
       >
-        <Ionicons name="close-circle" size={16} color={theme.colors.text} />
+        <Ionicons 
+          name="close-circle" 
+          size={16} 
+          color={theme.colors.text} 
+        />
       </TouchableOpacity>
     </View>
   );

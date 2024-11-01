@@ -1,4 +1,4 @@
-export type ToolType = 'chat' | 'image-generation' | 'image-analysis' | 'ocr' | 'image-refine' | 'translation';
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation';
 
 export interface ToolConfig {
   model?: string;
@@ -38,6 +38,10 @@ export interface ToolConfigField {
   min?: number;
   max?: number;
   step?: number;
+  required?: boolean;
+  initAction?: {
+    type: ActionType;
+  };
   onSelect?: {
     action: ActionType;
     paramName: string;
@@ -56,6 +60,7 @@ export interface ApiEndpoint {
   responseTransform?: (response: any) => any;
   streamProcessor?: (chunk: string) => string;
   headers?: Record<string, string>;
+  loadingTxt?: string;
 }
 
 export interface ToolAction {
@@ -64,7 +69,6 @@ export interface ToolAction {
   requiresInput?: boolean;
   requiresModel?: boolean;
   requiresModelLoaded?: boolean;
-  generating?: string;
   errorMessages?: {
     noInput?: string;
     noModel?: string;
@@ -87,17 +91,11 @@ export interface Tool {
     init?: ApiEndpoint;
     load?: ApiEndpoint;
   };
-  config?: {
-    requiresModel?: boolean;
-    modelLoadingRequired?: boolean;
-    availableModels?: Record<string, { name: string; type: string }>;
-    languages?: Record<string, { label: string; code: string }>;
-  };
 }
 
 export const TOOLS: Tool[] = [
   {
-    id: 'chat',
+    id: 'llm',
     label: 'Chat',
     icon: 'chatbubbles',
     features: {
@@ -113,6 +111,10 @@ export const TOOLS: Tool[] = [
         label: 'Modèle',
         loading: true,
         defaultValue: '',
+        required: true,
+        initAction: {
+          type: 'init',
+        },
         onSelect: {
           action: 'load',
           paramName: 'modelId',
@@ -142,71 +144,70 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'appel à l\'API'
         },
         api: {
-          path: '/chat/completions',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
           requestTransform: (params) => ({
-            model: params.model,
-            messages: params.messages,
-            stream: true,
-            system: params.system,
+            tool: 'llm',
+            config: {
+              model: params.model,
+              system: params.system,
+              prompt: params.input,
+              stream: true,
+              messages: params.messages
+            },
           })
         }
       }
     ],
     api: {
       init: {
-        path: '/models',
-        method: 'GET',
+        path: '/ai/process',
+        method: 'POST',
         responseType: 'json',
+        requestTransform: () => ({
+          tool: 'list_models',
+          config: {}
+        }),
         responseTransform: (response) => response.models
       },
       load: {
-        path: '/models/{modelId}/load',
+        path: '/ai/process',
         method: 'POST',
         streaming: true,
-        responseType: 'stream'
+        responseType: 'stream',
+        loadingTxt: 'Chargement du modèle en cours...',
+        requestTransform: (params) => ({
+          tool: 'load_model',
+          config: {
+            model_name: params.modelId
+          }
+        }),
       }
-    },
-    config: {
-      requiresModel: true,
-      modelLoadingRequired: true
     }
   },
   {
-    id: 'image-generation',
+    id: 'image_generation',
     label: 'Génération d\'image',
     icon: 'image',
     features: {
       promptInput: {
-        placeholder: 'Entrez une description...',
+        placeholder: 'Entrez un prompt...',
         multiline: true
-      },
-      fileUpload: {
-        accept: ['image/*'],
-        multiple: false,
-        base64Input: true
       }
     },
     configFields: [
       {
-        name: 'model',
+        name: 'image_model',
         type: 'select',
         label: 'Modèle',
+        required: true,
         loading: true,
-        defaultValue: ''
-      },
-      {
-        name: 'modelType',
-        type: 'select',
-        label: 'Type de modèle',
-        defaultValue: 'sdxl/base',
-        options: [
-          { value: 'sdxl/base', label: 'SDXL Base' },
-          { value: 'sdxl/turbo', label: 'SDXL Turbo' },
-          { value: 'sd/v1.5', label: 'Stable Diffusion 1.5' }
-        ]
+        defaultValue: '',
+        initAction: {
+          type: 'init',
+        },
       },
       {
         name: 'width',
@@ -247,7 +248,7 @@ export const TOOLS: Tool[] = [
     ],
     actions: [
       {
-        type: 'upload',
+        type: 'send',
         handler: 'handleImageGeneration',
         requiresInput: true,
         errorMessages: {
@@ -258,25 +259,42 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de la génération de l\'image'
         },
         api: {
-          path: '/images/generate',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
           requestTransform: (params) => ({
-            prompt: params.input,
-            model: params.model,
-            modelType: params.modelType,
-            width: params.width,
-            height: params.height,
-            steps: params.steps,
-            strength: params.strength
+            tool: 'image_generation',
+            config: {
+              model_type: params.model,
+              prompt: params.input,
+              negative_prompt: params.negative_prompt,
+              width: params.width,
+              height: params.height,
+              steps: params.steps,
+              strength: params.strength
+            },
           })
         }
       }
-    ]
+    ],
+    api: {
+      init: {
+        path: '/ai/process',
+        method: 'POST',
+        responseType: 'json',
+        requestTransform: () => ({
+          tool: 'list_image_models',
+          config: {}
+        }),
+        responseTransform: (response) => {
+          return Object.keys(response.models);
+        }
+      }
+    }
   },
   // {
-  //   id: 'image-analysis',
+  //   id: 'image_analysis',
   //   label: 'Analyse d\'image',
   //   icon: 'scan',
   //   features: {
@@ -335,22 +353,22 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'extraction du texte'
         },
         api: {
-          path: '/images/ocr',
+          path: '/ai/process',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
-            image: params.base64
+            tool: 'ocr',
+            config: {
+              image: params.base64
+            },
           }),
           responseTransform: (response) => response.text
         }
       }
-    ],
-    config: {
-      requiresModel: false
-    }
+    ]
   },
   // {
-  //   id: 'image-refine',
+  //   id: 'image_refine',
   //   label: 'Amélioration d\'image',
   //   icon: 'brush',
   //   features: {
@@ -460,20 +478,23 @@ export const TOOLS: Tool[] = [
         type: 'send',
         handler: 'handleTranslation',
         requiresInput: true,
-        generating: 'Traduction en cours...',
         errorMessages: {
           noInput: 'Veuillez entrer un texte à traduire',
           generating: 'Une traduction est déjà en cours',
           apiError: 'Erreur lors de la traduction'
         },
         api: {
-          path: '/translation/translate',
+          path: '/ai/process',
           method: 'POST',
           responseType: 'json',
+          loadingTxt: 'Traduction en cours...',
           requestTransform: (params) => ({
-            text: params.input,
-            from_lang: params.fromLang || 'fr',
-            to_lang: params.toLang || 'en'
+            tool: 'translation',
+            config: {
+              text: params.input,
+              from_lang: params.fromLang || 'fr',
+              to_lang: params.toLang || 'en'
+            },
           }),
           responseTransform: (response) => response.translated_text
         }
@@ -545,25 +566,3 @@ export interface Conversation {
   messages: Message[];
   timestamp: number;
 } 
-
-export type ToolHandlers = {
-  [key: string]: (...args: any[]) => Promise<void>;
-}; 
-
-export interface ModelConfig {
-  endpoint: string;
-  type: 'chat' | 'image' | 'translation';
-  availableModels?: {
-    [key: string]: {
-      name: string;
-      type: string;
-    };
-  };
-  languages?: {
-    [key: string]: {
-      label: string;
-      code: string;
-    };
-  };
-}
-

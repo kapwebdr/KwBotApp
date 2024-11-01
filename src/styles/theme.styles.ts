@@ -5,6 +5,25 @@ import { lightTheme } from '../theme';
 export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
   
+  const baseButton = {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    backgroundColor: theme.colors.inputBackground,
+  };
+
+  const baseButtonIcon = {
+    size: 24,
+    color: theme.colors.primary,
+  };
+
+  const baseButtonDisabled = {
+    opacity: 0.5,
+    backgroundColor: theme.colors.gray100,
+  };
+
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -167,6 +186,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       backgroundColor: theme.colors.aiBubble,
       alignSelf: 'flex-start',
       marginRight: '20%',
+      paddingBottom:20
     },
     messageText: {
       fontSize: 16,
@@ -249,15 +269,9 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     // Styles pour InputBar
     inputContainer: {
       flexDirection: 'row',
-      padding: 10,
-      backgroundColor: theme.colors.background,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
+      alignItems: 'center',
+      gap: 8,
+      width: '100%',
     },
     input: {
       flex: 1,
@@ -270,22 +284,14 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       minHeight: 40,
     },
     sendButton: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 10,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.colors.inputBackground,
+      ...baseButton,
+      marginLeft: 'auto',
+    },
+    sendButtonDisabled: {
+      ...baseButtonDisabled,
     },
     uploadButton: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 10,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.colors.inputBackground,
+      ...baseButton,
     },
     
     // Styles pour ToolConfig
@@ -354,9 +360,10 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       backgroundColor: theme.colors.gray100,
     },
     stopButton: {
+      ...baseButton,
       backgroundColor: 'rgba(255, 0, 0, 0.1)',
     },
-    modelSelectContainer: {
+    selectContainer: {
       flex: 1,
       position: 'relative',
       backgroundColor: theme.colors.inputBackground,
@@ -364,7 +371,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       minWidth: 120,
       padding: 4,
     },
-    modelSelect: {
+    select: {
       width: '100%',
       backgroundColor: 'transparent',
       color: theme.colors.text,
@@ -374,12 +381,12 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       paddingHorizontal: 8,
       fontSize: 14,
     },
-    modelSelectDisabled: {
+    selectDisabled: {
       opacity: 0.5,
       backgroundColor: theme.colors.gray100,
       color: theme.colors.gray400,
     },
-    modelSelectIcon: {
+    selectIcon: {
       position: 'absolute',
       right: 8,
       top: '50%',
@@ -606,16 +613,13 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       fontFamily: 'monospace',
     },
     voiceButton: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.colors.inputBackground,
-      marginRight: 8,
+      ...baseButton,
     },
     voiceButtonActive: {
-      backgroundColor: `${theme.colors.primary}20`,
+      backgroundColor: theme.colors.primary,
+    },
+    voiceButtonDisabled: {
+      ...baseButtonDisabled,
     },
     // Styles pour le sélecteur de thème
     themeSelector: {
@@ -722,7 +726,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     },
     messageActions: {
       position: 'absolute',
-      bottom: -10,
+      bottom: -30,
       right: -10,
       flexDirection: 'row',
       gap: 4,
@@ -753,7 +757,56 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     },
     actionIconActive: {
       color: theme.colors.userText,
-    }
+    },
+    // Styles de base pour les boutons
+    baseButton,
+    baseButtonDisabled,
+
+    // Bouton d'upload
+    uploadButton: {
+      ...baseButton,
+    },
+
+    // Bouton URL
+    urlButton: {
+      ...baseButton,
+    },
+
+    // Bouton d'envoi
+    sendButton: {
+      ...baseButton,
+    },
+    sendButtonDisabled: {
+      ...baseButtonDisabled,
+    },
+
+    // Bouton vocal
+    voiceButton: {
+      ...baseButton,
+    },
+    voiceButtonActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    voiceButtonDisabled: {
+      ...baseButtonDisabled,
+    },
+
+    // Bouton stop
+    stopButton: {
+      ...baseButton,
+      backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    },
+
+    // Style pour les icônes des boutons
+    buttonIcon: {
+      ...baseButtonIcon,
+    },
+    buttonIconDisabled: {
+      color: theme.colors.gray400,
+    },
+    buttonIconActive: {
+      color: theme.colors.background,
+    },
   });
 };
 

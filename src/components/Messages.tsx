@@ -48,7 +48,7 @@ export const Messages: React.FC = () => {
     return messageComponents;
   };
 
-  const bottomPadding = tool?.configFields?.length ? 230 : 100;
+  const bottomPadding = tool?.configFields?.length ? 230 : 140;
 
   return (
     <View style={[styles.messagesContainer, { paddingBottom: bottomPadding }]}>

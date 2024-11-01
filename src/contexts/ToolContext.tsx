@@ -15,10 +15,7 @@ interface ToolContextType {
   isGenerating: boolean;
   input: string;
   setInput: (input: string) => void;
-  availableModels: string[];
   selectConfigs: Record<string, any>;
-  loadSelectedModel: (modelName: string) => Promise<void>;
-  isModelLoaded: boolean;
   loading: ReturnType<typeof useLoading>;
 }
 
@@ -26,21 +23,18 @@ export const ToolContext = createContext<ToolContextType | null>(null);
 
 interface ToolState {
   config: ToolConfig;
-  loadedModel?: string;
-  isModelLoaded: boolean;
+  availableOptions?: string[];
 }
 
 export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentTool, setCurrentTool] = useState<ToolType>('chat');
+  const [currentTool, setCurrentTool] = useState<ToolType>('llm');
   const [toolConfig, setToolConfig] = useState<ToolConfig>({});
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [input, setInput] = useState('');
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
   const loading = useLoading();
-
+  const [availableOptions, setAvailableOptions] = useState<Record<string, string[]>>({});
   const { messages, setMessages } = useConversation();
 
   const updateToolConfig = (config: Partial<ToolConfig>) => {
@@ -56,74 +50,32 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  // Initialisation des outils
   useEffect(() => {
-    const initializeTool = async () => {
-      try {
+    const initializeToolOptions = async () => {
         const tool = TOOLS.find(t => t.id === currentTool);
-        if (!tool) return;
-
-        if (tool.api?.init) {
-          const result = await apiHandler.executeApiAction(
-            currentTool,
-            'init',
-            undefined,
-            loading.updateProgress
-          );
-          if (result && tool.config?.requiresModel) {
-            setAvailableModels(result);
+        if (!tool || !tool.configFields) return;
+        const newOptions = { ...availableOptions }; 
+        for (const field of tool.configFields) {
+          if (field.initAction && !availableOptions[field.name]) {
+            console.log(field.name);
+            const action = field.initAction;
+            try {
+              const result = await apiHandler.executeApiAction(
+                currentTool,
+                action.type,
+                {},
+                loading.updateProgress
+              );
+              newOptions[field.name] = result || [];
+            } catch (error) {
+              console.error(`Erreur lors de l'initialisation des options pour ${field.name}:`, error);
+            }
           }
         }
-
-        setToolConfig(tool.defaultConfig || {});
-      } catch (error) {
-        console.error('Erreur lors de l\'initialisation de l\'outil:', error);
-      }
+        setAvailableOptions(newOptions);
     };
-
-    initializeTool();
+    initializeToolOptions();
   }, [currentTool]);
-
-  const loadSelectedModel = async (modelName: string) => {
-    if (!modelName) return;
-    const tool = TOOLS.find(t => t.id === currentTool);
-    if (!tool?.api?.load) return;
-
-    const currentState = toolStates[currentTool];
-    if (currentState?.loadedModel === modelName && currentState.isModelLoaded) {
-      return;
-    }
-
-    loading.startLoading( 'Chargement du modèle...', 0);
-
-    try {
-      const success = await apiHandler.executeApiAction(
-        currentTool,
-        'load',
-        { modelId: modelName },
-        loading.updateProgress
-      );
-
-      if (success) {
-        setToolStates(prev => ({
-          ...prev,
-          [currentTool]: {
-            ...prev[currentTool],
-            loadedModel: modelName,
-            isModelLoaded: true
-          }
-        }));
-        setIsModelLoaded(true);
-        updateToolConfig({ model: modelName });
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement du modèle:', error);
-      updateToolConfig({ model: undefined });
-      setIsModelLoaded(false);
-    } finally {
-      loading.stopLoading();
-    }
-  };
 
   const handleToolAction = async (actionType: ActionType, ...args: any[]) => {
     const tool = TOOLS.find(t => t.id === currentTool);
@@ -132,19 +84,17 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const toolAction = tool.actions?.find(a => a.type === actionType);
     if (!toolAction) return;
 
+    const missingFields = tool.configFields
+    ?.filter(field => field.required && !toolConfig[field.name])
+    .map(field => field.name);
+
+    if (missingFields && missingFields.length > 0) {
+      console.error(`Les champs requis suivants sont manquants : ${missingFields.join(', ')}`);
+      return;
+    }
     // Validation des prérequis
     if (toolAction.requiresInput && !input.trim()) {
       console.error(toolAction.errorMessages?.noInput);
-      return;
-    }
-
-    if (toolAction.requiresModel && !toolConfig.model) {
-      console.error(toolAction.errorMessages?.noModel);
-      return;
-    }
-
-    if (toolAction.requiresModelLoaded && !isModelLoaded) {
-      console.error(toolAction.errorMessages?.modelNotLoaded);
       return;
     }
 
@@ -210,17 +160,51 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return tool.configFields.reduce((configs, field) => {
       if (field.type === 'select') {
+        
         configs[field.name] = {
           value: toolConfig[field.name] || field.defaultValue || '',
-          options: field.name === 'model' ? availableModels : field.options || [],
+          options: availableOptions[field.name] || field.options || [],
           isLoading: field.loading && loading.isLoading,
-          onChange: field.name === 'model' ? loadSelectedModel : 
-            (value: string) => updateToolConfig({ [field.name]: value })
+          onChange: async (value: string) => {
+            updateToolConfig({ [field.name]: value });
+            if (field.onSelect) {
+              const actionType = field.onSelect.action;
+              const apiAction = tool.api ? tool.api[actionType] : {};
+              const paramName = field.onSelect.paramName;
+              const params = { [paramName]: value };
+              const loadingTxt = apiAction.loadingTxt || '...';
+              loading.startLoading(loadingTxt, 0);
+  
+              try {
+                const success = await apiHandler.executeApiAction(
+                  currentTool,
+                  actionType,
+                  params,
+                  loading.updateProgress
+                );
+  
+                if (success) {
+                  updateToolConfig({ [field.name]: value });
+                  loading.stopLoading();
+                }
+              } catch (error) {
+                console.error(`Erreur lors de l'action ${actionType}:`, error);
+  
+                updateToolConfig({ [field.name]: undefined });
+                setToolStates(prev => ({
+                  ...prev,
+                  [currentTool]: {
+                    ...prev[currentTool],
+                  },
+                }));
+              }
+            }
+          }
         };
       }
       return configs;
     }, {} as Record<string, any>);
-  }, [currentTool, toolConfig, availableModels, loading.isLoading]);
+  }, [currentTool, toolConfig,availableOptions, loading.isLoading]);
 
   const value = {
     currentTool,
@@ -233,10 +217,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isGenerating,
     input,
     setInput,
-    availableModels,
     selectConfigs,
-    loadSelectedModel,
-    isModelLoaded,
     loading,
   };
 

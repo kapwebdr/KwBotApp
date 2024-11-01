@@ -72,7 +72,7 @@ class ApiHandler {
             JSON.stringify(params)
         })
       });
-
+      
       const newSessionId = response.headers.get('x-session-id');
       if (newSessionId) {
         await this.updateSessionId(newSessionId);
