@@ -8,6 +8,7 @@ import { useTool } from '../hooks/useTool';
 import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
 import FileUploadConfig from './FileUploadConfig';
 import { useLoading } from '../hooks/useLoading';
+import AudioRecorder from './AudioRecorder';
 
 interface ToolConfigComponentProps {
   tool: Tool;
@@ -143,6 +144,21 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
             keyboardType="numeric"
             placeholder={field.placeholder || field.label}
             placeholderTextColor={theme.colors.text}
+          />
+        );
+
+      case 'micro':
+        return (
+          <AudioRecorder
+            onRecordingComplete={(audioBlob) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const base64Audio = reader.result as string;
+                handleConfigChange(field.name, base64Audio);
+              };
+              reader.readAsDataURL(audioBlob);
+            }}
+            isDisabled={isGenerating}
           />
         );
 

@@ -29,7 +29,7 @@ export interface ToolFeatures {
 export interface ToolConfigField {
   name: string;
   label: string;
-  type: 'text' | 'select' | 'number';
+  type: 'text' | 'select' | 'number' | 'micro';
   placeholder?: string;
   loading?: boolean;
   defaultValue?: string | number;
@@ -677,6 +677,16 @@ export const TOOLS: Tool[] = [
         initAction: {
           type: 'init'
         }
+      },
+      {
+        name: 'micro',
+        type: 'micro',
+        label: 'Micro',
+        onSelect: {
+          action: 'execute',
+          // paramName: 'audio',
+          
+        }
       }
     ],
     actions: [
@@ -700,6 +710,39 @@ export const TOOLS: Tool[] = [
             tool: 'speech_to_text',
             config: {
               audio: params.base64,
+              stream: true,
+              model_size: params.model_size
+            }
+          })
+        }
+      },
+      {
+        type: 'execute',
+        handler: 'handleSpeechToText',
+        api: {
+          path: '/ai/process',
+          method: 'POST',
+          streaming: true,
+          responseType: 'stream',
+          requestTransform: (audioBlob: Blob) => {
+            console.log('YO');
+            return {
+              tool: 'speech_to_text',
+              config: {
+                audio: audioBlob,
+                stream: true,
+                model_size: 'medium' // Utilise la valeur du select model_size
+              }
+            }
+          },
+          streamProcessor: (chunk: any) => {
+            console.log(chunk);
+            return chunk.segment.text;
+          },
+          requestTransform: (params) => ({
+            tool: 'speech_to_text',
+            config: {
+              audio: params.audio,
               stream: true,
               model_size: params.model_size
             }

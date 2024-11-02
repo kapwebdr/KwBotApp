@@ -145,7 +145,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (toolAction.api.streaming) {
-        console.log('streaming');
         let streamContent = '';
         await apiHandler.executeApiAction(
           currentTool,
