@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Message } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
+import * as FileSystem from 'expo-file-system';
 
 interface MessageBubbleProps {
   message: Message;
@@ -36,38 +37,49 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     try {
-      if (isBase64Image) {
-        const base64Data = message.content.match(/base64,([^)]*)/)?.[1];
-        if (base64Data) {
+      if (Platform.OS === 'web') {
+        // Gestion web avec les APIs du navigateur
+        if (isBase64Image) {
           const link = document.createElement('a');
-          link.href = `data:image/png;base64,${base64Data}`;
+          link.href = message.content;
           link.download = `image_${Date.now()}.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-        }
-      } else if (isBase64Audio) {
-        const base64Data = message.content.match(/base64,([^)]*)/)?.[1];
-        if (base64Data) {
+        } else if (isBase64Audio) {
           const link = document.createElement('a');
           link.href = message.content;
           link.download = `audio_${Date.now()}.wav`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
+        } else {
+          const blob = new Blob([message.content], { type: 'text/plain' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `message_${Date.now()}.txt`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
         }
       } else {
-        const blob = new Blob([message.content], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `message_${Date.now()}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        // Gestion mobile avec expo-file-system
+        const base64Data = message.content.match(/base64,([^)]*)/)?.[1];
+        if (base64Data) {
+          const filename = isBase64Image ? 
+            `${FileSystem.documentDirectory}image_${Date.now()}.png` :
+            isBase64Audio ? 
+              `${FileSystem.documentDirectory}audio_${Date.now()}.wav` :
+              `${FileSystem.documentDirectory}message_${Date.now()}.txt`;
+
+          await FileSystem.writeAsStringAsync(filename, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        }
       }
     } catch (error) {
       console.error('Erreur lors du téléchargement:', error);

@@ -701,3 +701,49 @@ export interface Conversation {
   messages: Message[];
   timestamp: number;
 } 
+
+export interface ToolGroup {
+  id: string;
+  label: string;
+  icon: string;
+  tools: ToolType[];
+}
+
+export const TOOL_GROUPS: ToolGroup[] = [
+  {
+    id: 'chat',
+    label: 'Chat',
+    icon: 'chatbubbles',
+    tools: ['llm']
+  },
+  {
+    id: 'image',
+    label: 'Images',
+    icon: 'image',
+    tools: ['image_generation', 'image_analysis', 'image_refine']
+  },
+  {
+    id: 'text',
+    label: 'Texte',
+    icon: 'text',
+    tools: ['ocr', 'translation']
+  },
+  {
+    id: 'audio',
+    label: 'Audio',
+    icon: 'volume-high',
+    tools: ['text_to_speech']
+  }
+];
+
+// Helper pour obtenir le groupe d'un outil
+export const getToolGroup = (toolId: ToolType): ToolGroup | undefined => {
+  return TOOL_GROUPS.find(group => group.tools.includes(toolId));
+};
+
+// Helper pour obtenir tous les outils d'un groupe
+export const getToolsInGroup = (groupId: string): Tool[] => {
+  const group = TOOL_GROUPS.find(g => g.id === groupId);
+  if (!group) return [];
+  return TOOLS.filter(tool => group.tools.includes(tool.id));
+};

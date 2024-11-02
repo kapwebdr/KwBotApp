@@ -437,16 +437,68 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       flex: 1,
     },
     toolOptionsBar: {
-      width: '100%',
-      padding: 10,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
       backgroundColor: theme.colors.background,
       borderTopWidth: 1,
       borderTopColor: theme.colors.border,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      position: 'relative',
+    },
+    toolButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 8,
+      borderRadius: 8,
+    },
+    toolButtonActive: {
+      backgroundColor: `${theme.colors.primary}10`,
+    },
+    toolButtonSelected: {
+      backgroundColor: `${theme.colors.primary}20`,
+    },
+    toolButtonText: {
+      fontSize: 12,
+      color: theme.colors.text,
+      marginTop: 4,
+    },
+    toolButtonTextActive: {
+      color: theme.colors.primary,
+    },
+    toolSubmenu: {
       position: 'absolute',
-      bottom: 56,
-      left: 0,
-      right: 0,
-      zIndex: 10,
+      zIndex: 1000,
+    },
+    toolSubmenuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 4,
+      marginVertical: 2,
+    },
+    toolSubmenuItemSelected: {
+      backgroundColor: `${theme.colors.primary}10`,
+    },
+    toolSubmenuText: {
+      marginLeft: 12,
+      fontSize: 14,
+      color: theme.colors.text,
+      flex: 1,
+    },
+    toolSubmenuTextSelected: {
+      color: theme.colors.primary,
+      fontWeight: '500',
+    },
+    bottomBarItem: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      position: 'relative',
+    },
+    iconContainer: {
+      alignItems: 'center',
     },
     fileUploadConfig: {
       padding: 10,
@@ -812,6 +864,30 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       minWidth: 200,
       maxWidth: 400,
       marginVertical: 4,
+    },
+    iconContainer: {
+      position: 'relative',
+    },
+    toolSubmenu: {
+      position: 'absolute',
+      zIndex: 1000,
+    },
+    toolSubmenuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 8,
+      borderRadius: 4,
+    },
+    toolSubmenuItemSelected: {
+      backgroundColor: `${theme.colors.primary}10`,
+    },
+    toolSubmenuText: {
+      marginLeft: 8,
+      fontSize: 14,
+      color: theme.colors.text,
+    },
+    toolSubmenuTextSelected: {
+      color: theme.colors.primary,
     },
   });
 };
