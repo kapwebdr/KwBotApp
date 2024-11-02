@@ -1,79 +1,145 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# AI Tools ChatBot
 
-# Getting Started
+Une application React Native multiplateforme intégrant différents outils d'IA dans une interface de chat unifiée.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+## Fonctionnalités
 
-## Step 1: Start the Metro Server
+### Outils disponibles
+- **Chat** : Conversation avec différents modèles de langage
+- **Images** :
+  - Génération d'images à partir de texte
+  - Analyse d'images
+  - Amélioration d'images existantes
+- **Texte** :
+  - Extraction de texte (OCR)
+  - Traduction multilingue
+- **Audio** :
+  - Synthèse vocale (Text-to-Speech)
+  - Reconnaissance vocale pour les entrées
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+### Caractéristiques
+- Interface de chat unifiée pour tous les outils
+- Gestion des conversations avec historique
+- Support du streaming pour les réponses en temps réel
+- Thèmes personnalisables (clair, sombre, tamisé, océan, forêt)
+- Adaptation responsive (desktop/mobile)
+- Support multiplateforme (web, iOS, Android)
+- Monitoring système intégré (CPU, RAM, GPU)
 
-To start Metro, run the following command from the _root_ of your React Native project:
+## Prérequis
+
+- Node.js (v16 ou supérieur)
+- npm ou yarn
+- Expo CLI (`npm install -g expo-cli`)
+- Pour iOS : XCode et CocoaPods
+- Pour Android : Android Studio et SDK
+
+## Installation
 
 ```bash
-# using npm
-npm start
+# Cloner le repository
+git clone [url-du-repo]
+cd ai-tools-chatbot
 
-# OR using Yarn
-yarn start
+# Installer les dépendances
+yarn install
+# ou
+npm install
 ```
 
-## Step 2: Start your Application
+## Configuration
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
-```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
+1. Créer un fichier `.env` à la racine du projet :
+```env
+BASE_API_URL=http://votre-api-url
+BASE_WS_URL=ws://votre-ws-url
 ```
 
-### For iOS
+2. Configurer les modèles et endpoints dans `src/types.ts` selon votre backend
 
+## Développement
+
+### Web
 ```bash
-# using npm
-npm run ios
+# Démarrer en mode web
+yarn web
+# ou
+expo start --web
+```
 
-# OR using Yarn
+### iOS
+```bash
+# Installer les pods
+cd ios && pod install && cd ..
+
+# Démarrer en mode iOS
 yarn ios
+# ou
+expo start --ios
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+### Android
+```bash
+# Démarrer en mode Android
+yarn android
+# ou
+expo start --android
+```
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+### Mode développement universel
+```bash
+# Démarrer Expo avec choix de la plateforme
+yarn start
+# ou
+expo start
+```
 
-## Step 3: Modifying your App
+## Build de production
 
-Now that you have successfully run the app, let's modify it.
+### Web
+```bash
+# Build web
+yarn build:web
+# ou
+expo build:web
+```
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+### iOS
+```bash
+# Build iOS
+yarn build:ios
+# ou
+expo build:ios
+```
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+### Android
+```bash
+# Build Android
+yarn build:android
+# ou
+expo build:android
+```
 
-## Congratulations! :tada:
+## Architecture
 
-You've successfully run and modified your React Native App. :partying_face:
+- `/src/components` : Composants React Native
+- `/src/contexts` : Contextes React (thème, conversations, outils)
+- `/src/services` : Services (API, stockage)
+- `/src/styles` : Styles et thèmes
+- `/src/hooks` : Hooks personnalisés
 
-### Now what?
+## Contribution
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+1. Fork le projet
+2. Créer une branche (`git checkout -b feature/amazing-feature`)
+3. Commit les changements (`git commit -m 'Add amazing feature'`)
+4. Push la branche (`git push origin feature/amazing-feature`)
+5. Ouvrir une Pull Request
 
-# Troubleshooting
+## Licence
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+[Votre licence]
 
-# Learn More
+## Contact
 
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+[Vos informations de contact]
