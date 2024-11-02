@@ -25,23 +25,7 @@ const ChatBot: React.FC = () => {
   const { theme, toggleTheme, isDark } = useTheme();
   const [systemStatus, setSystemStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
-  // const wsRef = useRef<SystemWebSocket | null>(null);
-
-  // useEffect(() => {
-  //   wsRef.current = new SystemWebSocket(
-  //     (metrics) => setSystemMetrics(metrics),
-  //     (status) => {
-  //       setSystemStatus(status);
-  //       setIsApiAvailable(status === 'connected');
-  //     }
-  //   );
-  //   wsRef.current.connect();
-
-  //   return () => {
-  //     wsRef.current?.disconnect();
-  //   };
-  // }, []);
-
+  
   const toggleSidebar = () => {
     if (isSidebarOpen) {
       closeSidebar();
@@ -99,7 +83,7 @@ const ChatBot: React.FC = () => {
                 <Ionicons name="menu" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
 
-              {/* <SystemStatus status={systemStatus} metrics={systemMetrics} /> */}
+              <SystemStatus status={systemStatus} metrics={systemMetrics} />
 
               <ThemeSelector />
             </View>

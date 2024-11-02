@@ -2,20 +2,22 @@ import React, { useRef, useEffect } from 'react';
 import { View, FlatList } from 'react-native';
 import { useConversation } from '../contexts/ConversationContext';
 import { MessageBubble } from './MessageBubble';
+import { LoadingBubble } from './LoadingBubble';
 import { createStyles } from '../styles/theme.styles';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTool } from '../hooks/useTool';
-import { LoadingBubble } from './LoadingBubble';
+
 export const Messages: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const { messages } = useConversation();
   const { 
     loading, 
-    tool
+    tool,
+    toolHeight
   } = useTool();
   const flatListRef = useRef<FlatList>(null);
-  
+
   const scrollToBottom = () => {
     if (flatListRef.current) {
       try {
@@ -43,12 +45,18 @@ export const Messages: React.FC = () => {
       />
     ));
     if (loading.isLoading) {
-      messageComponents.push(<LoadingBubble key="loading-bubble" progress={loading.progress} status={loading.status} />);
+      messageComponents.push(
+        <LoadingBubble 
+          key="loading-bubble" 
+          progress={loading.progress} 
+          status={loading.status} 
+        />
+      );
     }
     return messageComponents;
   };
 
-  const bottomPadding = tool?.configFields?.length ? 230 : 140;
+  const bottomPadding = toolHeight + 80;
 
   return (
     <View style={[styles.messagesContainer, { paddingBottom: bottomPadding }]}>

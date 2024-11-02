@@ -232,6 +232,8 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, {} as Record<string, any>);
   }, [currentTool, toolStates,availableOptions, loading.isLoading]); 
 
+  const [toolHeight, setToolHeight] = useState(0);
+
   const value = {
     currentTool,
     setCurrentTool,
@@ -246,6 +248,8 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     addPendingFile,
     clearPendingFiles,
+    toolHeight,
+    setToolHeight,
   };
 
   return (

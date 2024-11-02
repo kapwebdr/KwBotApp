@@ -1,5 +1,4 @@
 export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech';
-import { Text } from 'react-native';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -323,46 +322,46 @@ export const TOOLS: Tool[] = [
       }
     }
   },
-  // {
-  //   id: 'image_analysis',
-  //   label: 'Analyse d\'image',
-  //   icon: 'scan',
-  //   features: {
-  //     fileUpload: {
-  //       accept: ['image/*'],
-  //       multiple: false,
-  //       base64Input: true
-  //     }
-  //   },
-  //   configFields: [
-  //     {
-  //       name: 'labels',
-  //       type: 'select',
-  //       label: 'Labels à détecter',
-  //       defaultValue: ['chat', 'chien', 'oiseau', 'personne', 'voiture'],
-  //       options: ['chat', 'chien', 'oiseau', 'personne', 'voiture', 'vélo', 'arbre', 'maison']
-  //     }
-  //   ],
-  //   actions: [
-  //     {
-  //       type: 'upload',
-  //       handler: 'handleImageAnalysis',
-  //       errorMessages: {
-  //         noFile: 'Veuillez sélectionner une image',
-  //         apiError: 'Erreur lors de l\'analyse de l\'image'
-  //       },
-  //       api: {
-  //         path: '/images/analyze',
-  //         method: 'POST',
-  //         responseType: 'json',
-  //         requestTransform: (params) => ({
-  //           image: params.base64,
-  //           labels: params.labels
-  //         })
-  //       }
-  //     }
-  //   ]
-  // },
+  {
+    id: 'image_analysis',
+    label: 'Analyse d\'image',
+    icon: 'scan',
+    features: {
+      fileUpload: {
+        accept: ['image/*'],
+        multiple: false,
+        base64Input: true
+      }
+    },
+    configFields: [
+      {
+        name: 'labels',
+        type: 'select',
+        label: 'Labels à détecter',
+        defaultValue: ['chat', 'chien', 'oiseau', 'personne', 'voiture'],
+        options: ['chat', 'chien', 'oiseau', 'personne', 'voiture', 'vélo', 'arbre', 'maison']
+      }
+    ],
+    actions: [
+      {
+        type: 'upload',
+        handler: 'handleImageAnalysis',
+        errorMessages: {
+          noFile: 'Veuillez sélectionner une image',
+          apiError: 'Erreur lors de l\'analyse de l\'image'
+        },
+        api: {
+          path: '/images/analyze',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            image: params.base64,
+            labels: params.labels
+          })
+        }
+      }
+    ]
+  },
   {
     id: 'ocr',
     label: 'Extraction de texte',
@@ -413,76 +412,76 @@ export const TOOLS: Tool[] = [
       }
     ]
   },
-  // {
-  //   id: 'image_refine',
-  //   label: 'Amélioration d\'image',
-  //   icon: 'brush',
-  //   features: {
-  //     promptInput: {
-  //       placeholder: 'Instructions de modification...',
-  //       multiline: true
-  //     },
-  //     fileUpload: {
-  //       accept: ['image/*'],
-  //       multiple: false,
-  //       base64Input: true,
-  //       base64Output: true
-  //     }
-  //   },
-  //   configFields: [
-  //     {
-  //       name: 'modelType',
-  //       type: 'select',
-  //       label: 'Modèle',
-  //       defaultValue: 'sdxl/refiner',
-  //       options: [
-  //         { value: 'sdxl/refiner', label: 'SDXL Refiner' }
-  //       ]
-  //     },
-  //     {
-  //       name: 'strength',
-  //       type: 'number',
-  //       label: 'Force',
-  //       defaultValue: 0.3,
-  //       min: 0,
-  //       max: 1,
-  //       step: 0.1
-  //     },
-  //     {
-  //       name: 'steps',
-  //       type: 'number',
-  //       label: 'Étapes',
-  //       defaultValue: 20,
-  //       min: 1,
-  //       max: 100,
-  //       step: 1
-  //     }
-  //   ],
-  //   actions: [
-  //     {
-  //       type: 'upload',
-  //       handler: 'handleImageRefinement',
-  //       requiresInput: true,
-  //       errorMessages: {
-  //         noFile: 'Veuillez sélectionner une image',
-  //         noInput: 'Veuillez décrire les modifications souhaitées',
-  //         apiError: 'Erreur lors de l\'amélioration de l\'image'
-  //       },
-  //       api: {
-  //         path: '/images/refine',
-  //         method: 'POST',
-  //         streaming: true,
-  //         responseType: 'base64',
-  //         requestTransform: (params) => ({
-  //           image: params.base64,
-  //           prompt: params.input,
-  //           strength: params.strength || 0.3,
-  //           steps: params.steps || 20
-  //         })
-  //       }
-  //     }
-  //   ]
-  // },
+  {
+    id: 'image_refine',
+    label: 'Amélioration d\'image',
+    icon: 'brush',
+    features: {
+      promptInput: {
+        placeholder: 'Instructions de modification...',
+        multiline: true
+      },
+      fileUpload: {
+        accept: ['image/*'],
+        multiple: false,
+        base64Input: true,
+        base64Output: true
+      }
+    },
+    configFields: [
+      {
+        name: 'modelType',
+        type: 'select',
+        label: 'Modèle',
+        defaultValue: 'sdxl/refiner',
+        options: [
+          { value: 'sdxl/refiner', label: 'SDXL Refiner' }
+        ]
+      },
+      {
+        name: 'strength',
+        type: 'number',
+        label: 'Force',
+        defaultValue: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1
+      },
+      {
+        name: 'steps',
+        type: 'number',
+        label: 'Étapes',
+        defaultValue: 20,
+        min: 1,
+        max: 100,
+        step: 1
+      }
+    ],
+    actions: [
+      {
+        type: 'upload',
+        handler: 'handleImageRefinement',
+        requiresInput: true,
+        errorMessages: {
+          noFile: 'Veuillez sélectionner une image',
+          noInput: 'Veuillez décrire les modifications souhaitées',
+          apiError: 'Erreur lors de l\'amélioration de l\'image'
+        },
+        api: {
+          path: '/images/refine',
+          method: 'POST',
+          streaming: true,
+          responseType: 'base64',
+          requestTransform: (params) => ({
+            image: params.base64,
+            prompt: params.input,
+            strength: params.strength || 0.3,
+            steps: params.steps || 20
+          })
+        }
+      }
+    ]
+  },
   {
     id: 'translation',
     label: 'Traduction',
@@ -635,6 +634,27 @@ export const TOOLS: Tool[] = [
         }
       }
     },
+  },
+  {
+    id: 'system_metrics',
+    label: 'Métriques Système',
+    icon: 'stats-chart',
+    actions: [
+      {
+        type: 'execute',
+        handler: 'handleSystemMetrics',
+        api: {
+          path: '/ai/process',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: () => ({
+            tool: 'system_metrics',
+            config: {}
+          }),
+          responseTransform: (response) => response as SystemMetrics
+        }
+      }
+    ]
   }
 ];
 
@@ -747,3 +767,26 @@ export const getToolsInGroup = (groupId: string): Tool[] => {
   if (!group) return [];
   return TOOLS.filter(tool => group.tools.includes(tool.id));
 };
+
+export interface SystemMetrics {
+  cpu: {
+    percent: number;
+    frequency_current: number;
+    frequency_max: number;
+    cores: number;
+  };
+  memory: {
+    total: number;
+    available: number;
+    percent: number;
+    used: number;
+  };
+  gpu: {
+    id: number;
+    name: string;
+    load: number;
+    memory_used: number;
+    memory_total: number;
+    temperature: number;
+  }[];
+}

@@ -1,18 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
-import { SystemMetrics } from '../services/websocket';
+import { SystemMetrics } from '../types';
+import { apiHandler } from '../services/apiHandler';
 
-interface SystemStatusProps {
-  status: 'connected' | 'disconnected' | 'error';
-  metrics: SystemMetrics | null;
-}
-
-export const SystemStatus: React.FC<SystemStatusProps> = ({ status, metrics }) => {
+export const SystemStatus: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [status, setStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const result = await apiHandler.executeApiAction(
+          'system_metrics',
+          'execute',
+          {}
+        );
+        setMetrics(result);
+        setStatus('connected');
+      } catch (error) {
+        console.error('Erreur lors de la récupération des métriques:', error);
+        setStatus('error');
+      }
+    };
+
+    // Première récupération
+    fetchMetrics();
+
+    // Rafraîchissement toutes les 10 secondes
+    const interval = setInterval(fetchMetrics, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getStatusColor = () => {
     switch (status) {
