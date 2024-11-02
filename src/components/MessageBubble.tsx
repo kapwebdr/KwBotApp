@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Message } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,11 +18,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [isButtonPressed, setIsButtonPressed] = useState<'copy' | 'download' | null>(null);
 
   const isAI = message.role === 'assistant' || message.role === 'ai';
-  const isImage = message.content.startsWith('![');
+  const isBase64Image = /^data:image\/[a-zA-Z]+;base64,/.test(message.content);
+  const isBase64Audio = /^data:audio\/[a-zA-Z]+;base64,/.test(message.content);
 
   const handleCopy = async () => {
     try {
-      if (isImage) {
+      if (isBase64Image || isBase64Audio) {
         const base64Data = message.content.match(/base64,([^)]*)/)?.[1];
         if (base64Data) {
           await navigator.clipboard.writeText(base64Data);
@@ -37,12 +38,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const handleDownload = () => {
     try {
-      if (isImage) {
+      if (isBase64Image) {
         const base64Data = message.content.match(/base64,([^)]*)/)?.[1];
         if (base64Data) {
           const link = document.createElement('a');
           link.href = `data:image/png;base64,${base64Data}`;
           link.download = `image_${Date.now()}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } else if (isBase64Audio) {
+        const base64Data = message.content.match(/base64,([^)]*)/)?.[1];
+        if (base64Data) {
+          const link = document.createElement('a');
+          link.href = message.content;
+          link.download = `audio_${Date.now()}.wav`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -63,6 +74,38 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  const renderContent = () => {
+    if (isBase64Image) {
+      return (
+        <Image
+          source={{ uri: message.content }}
+          style={styles.messageImage}
+        />
+      );
+    } else if (isBase64Audio) {
+      return (
+        <audio 
+          controls 
+          src={message.content}
+          style={styles.messageAudio}
+        >
+          Votre navigateur ne supporte pas l'élément audio.
+        </audio>
+      );
+    } else {
+      return (
+        <Text
+          style={[
+            styles.messageText,
+            isAI ? styles.aiText : styles.userText,
+          ]}
+        >
+          {message.content}
+        </Text>
+      );
+    }
+  };
+
   return (
     <Pressable
       onPressIn={() => setIsMessagePressed(true)}
@@ -73,14 +116,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       ]}
     >
       <View style={styles.messageContent}>
-        <Text
-          style={[
-            styles.messageText,
-            isAI ? styles.aiText : styles.userText,
-          ]}
-        >
-          {message.content}
-        </Text>
+        {renderContent()}
         {isAI && (isMessagePressed || Platform.OS === 'web') && (
           <View style={styles.messageActions}>
             <TouchableOpacity 

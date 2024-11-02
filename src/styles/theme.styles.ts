@@ -807,6 +807,12 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     buttonIconActive: {
       color: theme.colors.background,
     },
+    messageAudio: {
+      width: '100%',
+      minWidth: 200,
+      maxWidth: 400,
+      marginVertical: 4,
+    },
   });
 };
 

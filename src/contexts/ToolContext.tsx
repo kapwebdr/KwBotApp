@@ -1,46 +1,43 @@
 import React, { createContext, useState, useEffect, useMemo } from 'react';
-import { ToolType, ToolConfig, Message, TOOLS } from '../types';
+import { ToolType, ToolConfig, Message, TOOLS, ToolContextType, ToolState } from '../types';
 import { useConversation } from './ConversationContext';
 import { apiHandler } from '../services/apiHandler';
 import { useLoading } from '../hooks/useLoading';
 
-interface ToolContextType {
-  currentTool: ToolType;
-  setCurrentTool: (tool: ToolType) => void;
-  toolConfig: ToolConfig;
-  updateToolConfig: (config: Partial<ToolConfig>) => void;
-  handleToolAction: (action: ActionType, ...args: any[]) => Promise<void>;
-  isToolMenuOpen: boolean;
-  setIsToolMenuOpen: (isOpen: boolean) => void;
-  isGenerating: boolean;
-  input: string;
-  setInput: (input: string) => void;
-  selectConfigs: Record<string, any>;
-  loading: ReturnType<typeof useLoading>;
-}
-
 export const ToolContext = createContext<ToolContextType | null>(null);
 
-interface ToolState {
-  config: ToolConfig;
-  availableOptions?: string[];
-}
-
 export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  
   const [currentTool, setCurrentTool] = useState<ToolType>('llm');
-  const [toolConfig, setToolConfig] = useState<ToolConfig>({});
+  const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
+ 
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [input, setInput] = useState('');
-  const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
+  //const [input, setInput] = useState('');
   const loading = useLoading();
   const [availableOptions, setAvailableOptions] = useState<Record<string, string[]>>({});
   const { messages, setMessages } = useConversation();
-
-  const updateToolConfig = (config: Partial<ToolConfig>) => {
-    const newConfig = { ...toolConfig, ...config };
-    setToolConfig(newConfig);
+  const initialToolConfig = useMemo(() => {
+    const tool = TOOLS.find(t => t.id === currentTool);
+    if (!tool?.configFields) return {};
     
+    const newConfig =  tool.configFields.reduce((config, field) => {
+      config[field.name] = field.defaultValue || '';
+      return config;
+    }, {} as ToolConfig);
+    // setToolConfig(newConfig);
+    setToolStates(prev => ({
+      ...prev,
+      [currentTool]: {
+        ...prev[currentTool],
+        config: newConfig
+      }
+    }));
+    
+  }, [currentTool]);
+  
+  const updateToolConfig = (config: Partial<ToolConfig>) => {
+    const newConfig = { ...toolStates[currentTool]?.config, ...config }; 
     setToolStates(prev => ({
       ...prev,
       [currentTool]: {
@@ -57,7 +54,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newOptions = { ...availableOptions }; 
         for (const field of tool.configFields) {
           if (field.initAction && !availableOptions[field.name]) {
-            console.log(field.name);
             const action = field.initAction;
             try {
               const result = await apiHandler.executeApiAction(
@@ -77,6 +73,34 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeToolOptions();
   }, [currentTool]);
 
+  const setInput = (input: string) => {
+    setToolStates(prev => ({
+      ...prev,
+      [currentTool]: {
+        ...prev[currentTool],
+        input
+      }
+    }));
+  };
+  const addPendingFile = (file: { name: string; file: File }) => {
+    setToolStates(prev => ({
+      ...prev,
+      [currentTool]: {
+        ...prev[currentTool],
+        pendingFiles: [...(prev[currentTool]?.pendingFiles || []), file]
+      }
+    }));
+  };
+
+  const clearPendingFiles = () => {
+    setToolStates(prev => ({
+      ...prev,
+      [currentTool]: {
+        ...prev[currentTool],
+        pendingFiles: []
+      }
+    }));
+  };
   const handleToolAction = async (actionType: ActionType, ...args: any[]) => {
     const tool = TOOLS.find(t => t.id === currentTool);
     if (!tool) return;
@@ -85,7 +109,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!toolAction) return;
 
     const missingFields = tool.configFields
-    ?.filter(field => field.required && !toolConfig[field.name])
+    ?.filter(field => field.required && !toolStates[currentTool]?.config[field.name])
     .map(field => field.name);
 
     if (missingFields && missingFields.length > 0) {
@@ -93,6 +117,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     // Validation des prérequis
+    const input = toolStates[currentTool]?.input || '';
     if (toolAction.requiresInput && !input.trim()) {
       console.error(toolAction.errorMessages?.noInput);
       return;
@@ -100,18 +125,20 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       setIsGenerating(true);
-      loading.startLoading(toolAction.generating);
-      
+      loading.startLoading(toolAction.generatingTxt,toolAction.generatingProgress);
+      const userContent =  tool.userBubbleContent ? 
+        await tool.userBubbleContent(toolStates[currentTool]) :
+        input;
       const newMessages = [
         ...messages,
-        { role: 'human', content: input } as Message,
+        { role: 'human', content: userContent } as Message,
         { role: 'assistant', content: '...' } as Message
       ];
       setMessages(newMessages.slice(0, -1));
       setInput('');
 
       const params = {
-        ...toolConfig,
+        ...toolStates[currentTool]?.config,
         input,
         messages: newMessages.slice(0, -1),
         ...args[0]
@@ -157,12 +184,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const selectConfigs = useMemo(() => {
     const tool = TOOLS.find(t => t.id === currentTool);
     if (!tool?.configFields) return {};
-
     return tool.configFields.reduce((configs, field) => {
       if (field.type === 'select') {
         
         configs[field.name] = {
-          value: toolConfig[field.name] || field.defaultValue || '',
+          value: toolStates[currentTool]?.config[field.name] || field.defaultValue || '',
           options: availableOptions[field.name] || field.options || [],
           isLoading: field.loading && loading.isLoading,
           onChange: async (value: string) => {
@@ -204,21 +230,22 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return configs;
     }, {} as Record<string, any>);
-  }, [currentTool, toolConfig,availableOptions, loading.isLoading]);
+  }, [currentTool, toolStates,availableOptions, loading.isLoading]); 
 
   const value = {
     currentTool,
     setCurrentTool,
-    toolConfig,
+    toolStates,
     updateToolConfig,
     handleToolAction,
     isToolMenuOpen,
     setIsToolMenuOpen,
     isGenerating,
-    input,
     setInput,
     selectConfigs,
     loading,
+    addPendingFile,
+    clearPendingFiles,
   };
 
   return (

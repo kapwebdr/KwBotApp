@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { Tool, ToolConfig as IToolConfig } from '../types';
+import { Tool, ToolConfig  } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles, getSelectStyle } from '../styles/theme.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,8 +11,8 @@ import { useLoading } from '../hooks/useLoading';
 
 interface ToolConfigComponentProps {
   tool: Tool;
-  config: IToolConfig;
-  onConfigChange: (config: IToolConfig) => void;
+  config: ToolConfig;
+  onConfigChange: (config: ToolConfig) => void;
 }
 
 export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
@@ -23,17 +23,21 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const { 
+    toolStates,
+    currentTool,
     selectConfigs,
-    input,
     setInput,
     isGenerating,
     handleToolAction,
+    addPendingFile,
+    clearPendingFiles
     } = useTool();
   const loading = useLoading();
   const [isListening, setIsListening] = useState(false);
   const speechRecognition = useRef<SpeechRecognition | null>(null);
-  const [pendingFile, setPendingFile] = useState<{ name: string; file: File } | null>(null);
-
+  const currentState = toolStates[currentTool];
+  const pendingFiles = currentState?.pendingFiles || [];
+  const input = currentState?.input || '';
   const handleConfigChange = (name: string, value: any) => {
     onConfigChange({
       ...config,
@@ -46,18 +50,18 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const hasUrlInput = !!tool.features?.urlInput;
 
   const handleSend = async () => {
-    if (pendingFile) {
+    if (pendingFiles && pendingFiles.length > 0) {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
         await handleToolAction('upload', {
           base64,
-          name: pendingFile.name,
-          type: pendingFile.file.type
+          name: pendingFiles[0].name,
+          type: pendingFiles[0].file.type
         });
-        clearPendingFile();
+        clearPendingFiles();
       };
-      reader.readAsDataURL(pendingFile.file);
+      reader.readAsDataURL(pendingFiles[0].file);
     } else if (input.trim()) {
       handleToolAction('send');
     }
@@ -73,7 +77,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
         return (
           <TextInput
             style={styles.textInput}
-            value={config[field.name] as string}
+            value={config[field.name] || (field.defaultValue || '')}
             onChangeText={(value) => handleConfigChange(field.name, value)}
             placeholder={field.placeholder || field.label}
             placeholderTextColor={theme.colors.text}
@@ -127,12 +131,12 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
         return (
           <TextInput
             style={styles.textInput}
-            value={String(config[field.name] || field.defaultValue || '')}
+            value={config[field.name] || (field.defaultValue || '')}
             onChangeText={(value) => {
               const numValue = parseFloat(value);
               if (!isNaN(numValue)) {
-                if (field.min !== undefined && numValue < field.min) return;
-                if (field.max !== undefined && numValue > field.max) return;
+                //if (field.min !== undefined && numValue < field.min) return;
+                //if (field.max !== undefined && numValue > field.max) return;
                 handleConfigChange(field.name, numValue);
               }
             }}
@@ -252,11 +256,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   };
 
   const handleFileSelect = (file: File) => {
-    setPendingFile({ name: file.name, file });
-  };
-
-  const clearPendingFile = () => {
-    setPendingFile(null);
+    addPendingFile({ name: file.name, file });
   };
 
   if (!tool.configFields && !hasPromptInput && !hasFileUpload && !hasUrlInput) {
@@ -279,8 +279,8 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
             <FileUploadConfig
               tool={tool}
               onFileSelect={handleFileSelect}
-              pendingFile={pendingFile}
-              onClearFile={clearPendingFile}
+              pendingFiles={pendingFiles}
+              onClearFiles={clearPendingFiles}
             />
             {hasPromptInput && (
               <>
@@ -312,15 +312,15 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
             <TouchableOpacity 
               style={[
                 styles.sendButton,
-                isGenerating ? styles.stopButton : (!input.trim() && !pendingFile) && styles.sendButtonDisabled
+                isGenerating ? styles.stopButton : (!input.trim() && !pendingFiles) && styles.sendButtonDisabled
               ]}
               onPress={isGenerating ? handleStop : handleSend}
-              disabled={!isGenerating && (!input.trim() && !pendingFile)}
+              disabled={!isGenerating && (!input.trim() && !pendingFiles)}
             >
               <Ionicons 
                 name={isGenerating ? "stop" : "send"}
                 size={styles.buttonIcon.size}
-                color={isGenerating ? "red" : (!input.trim() && !pendingFile) ? theme.colors.gray400 : theme.colors.primary}
+                color={isGenerating ? "red" : (!input.trim() && !pendingFiles) ? theme.colors.gray400 : theme.colors.primary}
               />
             </TouchableOpacity>
           </View>

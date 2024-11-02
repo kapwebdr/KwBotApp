@@ -77,7 +77,6 @@ class ApiHandler {
       if (newSessionId) {
         await this.updateSessionId(newSessionId);
       }
-
       if (endpoint.streaming) {
         return this.handleStreamResponse(response, endpoint, onProgress, onComplete);
       }
@@ -107,7 +106,6 @@ class ApiHandler {
 
     const decoder = new TextDecoder();
     let buffer = '';
-
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -116,7 +114,6 @@ class ApiHandler {
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
-
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const chunk = line.slice(6);
@@ -128,20 +125,21 @@ class ApiHandler {
             const processedChunk = endpoint.streamProcessor ? 
               endpoint.streamProcessor(chunk) : 
               chunk;
-
+            
             if (!processedChunk) continue;
-
             try {
               const data = JSON.parse(processedChunk);
               if (data.progress !== undefined && onProgress) {
                 onProgress(data.progress);
               }
-              if (onComplete) {
-                onComplete(processedChunk);
+              if (data.status === 'completed' && onComplete) {
+                const result = endpoint.responseTransform ? endpoint.responseTransform(data) : data;
+                onComplete(result);
               }
             } catch {
               if (onComplete) {
-                onComplete(processedChunk);
+                const result = endpoint.responseTransform ? endpoint.responseTransform(processedChunk) : processedChunk;
+                onComplete(result);
               }
             }
           }

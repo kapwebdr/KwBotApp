@@ -9,15 +9,15 @@ import { useTool } from '../hooks/useTool';
 interface FileUploadConfigProps {
   tool: Tool;
   onFileSelect: (file: File) => void;
-  pendingFile: { name: string; file: File } | null;
-  onClearFile: () => void;
+  pendingFiles: { name: string; file: File } | null;
+  onClearFiles: () => void;
 }
 
 export const FileUploadConfig: React.FC<FileUploadConfigProps> = ({
   tool,
   onFileSelect,
-  pendingFile,
-  onClearFile
+  pendingFiles,
+  onClearFiles
 }) => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
@@ -56,7 +56,7 @@ export const FileUploadConfig: React.FC<FileUploadConfigProps> = ({
             accept={tool.features?.fileUpload?.accept?.join(',')}
             multiple={tool.features?.fileUpload?.multiple}
           />
-          {!pendingFile ? (
+          {!pendingFiles || pendingFiles.length === 0 ? (
             <TouchableOpacity 
               style={styles.uploadButton}
               onPress={handleFileUploadClick}
@@ -68,10 +68,15 @@ export const FileUploadConfig: React.FC<FileUploadConfigProps> = ({
               />
             </TouchableOpacity>
           ) : (
-            <PendingFile
-              fileName={pendingFile.name}
-              onClear={onClearFile}
-            />
+           <View>
+              {pendingFiles.map((file, index) => (
+                <PendingFile
+                  key={index}
+                  fileName={file.name}
+                  onClear={() => onClearFiles()}
+                />
+              ))}
+            </View>
           )}
         </>
       )}

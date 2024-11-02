@@ -47,7 +47,6 @@ export const LoadingBubble: React.FC<LoadingBubbleProps> = ({
       animations.forEach(anim => anim.stop());
     };
   }, [dotAnimations]);
-
   return (
     <View style={[styles.messageBubble, styles.aiBubble]}>
       <View style={styles.loadingContent}>

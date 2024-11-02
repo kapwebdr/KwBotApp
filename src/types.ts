@@ -1,5 +1,5 @@
-export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation';
-
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech';
+import { Text } from 'react-native';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -49,6 +49,27 @@ export interface ToolConfigField {
   };
 }
 
+export interface ToolContextType {
+  currentTool: ToolType;
+  setCurrentTool: (tool: ToolType) => void;
+  toolConfig: ToolConfig;
+  updateToolConfig: (config: Partial<ToolConfig>) => void;
+  handleToolAction: (action: ActionType, ...args: any[]) => Promise<void>;
+  isToolMenuOpen: boolean;
+  setIsToolMenuOpen: (isOpen: boolean) => void;
+  isGenerating: boolean;
+  input: string;
+  setInput: (input: string) => void;
+  selectConfigs: Record<string, any>;
+  loading: ReturnType<typeof useLoading>;
+}
+
+export interface ToolState {
+  config: ToolConfig;
+  availableOptions?: string[];
+  input?: string;
+  pendingFiles?: Array<{ name: string; file: File }>;
+}
 export type ActionType = 'init' | 'load' | 'execute' | 'stop' | 'send' | 'upload' | 'url';
 
 export interface ApiEndpoint {
@@ -69,6 +90,8 @@ export interface ToolAction {
   requiresInput?: boolean;
   requiresModel?: boolean;
   requiresModelLoaded?: boolean;
+  generatingTxt?: string;
+  generatingProgress?: number;
   errorMessages?: {
     noInput?: string;
     noModel?: string;
@@ -87,6 +110,7 @@ export interface Tool {
   configFields?: ToolConfigField[];
   defaultConfig?: ToolConfig;
   actions: ToolAction[];
+  userBubbleContent?:(response: any) => any;
   api?: {
     init?: ApiEndpoint;
     load?: ApiEndpoint;
@@ -251,6 +275,8 @@ export const TOOLS: Tool[] = [
         type: 'send',
         handler: 'handleImageGeneration',
         requiresInput: true,
+        generatingTxt: 'Génération en cours...',
+        generatingProgress: 0,
         errorMessages: {
           noInput: 'Veuillez entrer une description',
           noModel: 'Veuillez sélectionner un modèle',
@@ -258,6 +284,7 @@ export const TOOLS: Tool[] = [
           generating: 'Une génération est déjà en cours',
           apiError: 'Erreur lors de la génération de l\'image'
         },
+        
         api: {
           path: '/ai/process',
           method: 'POST',
@@ -266,15 +293,18 @@ export const TOOLS: Tool[] = [
           requestTransform: (params) => ({
             tool: 'image_generation',
             config: {
-              model_type: params.model,
+              model_type: params.image_model,
               prompt: params.input,
-              negative_prompt: params.negative_prompt,
+              // negative_prompt: params.negative_prompt,
               width: params.width,
               height: params.height,
               steps: params.steps,
               strength: params.strength
             },
-          })
+          }),
+          responseTransform: (response) => {
+            return `data:image/png;base64,${response.image}`;
+          }
         }
       }
     ],
@@ -344,6 +374,22 @@ export const TOOLS: Tool[] = [
         base64Input: true
       }
     },
+    userBubbleContent: async (toolState: ToolState) => {
+      const pendingFiles = toolState.pendingFiles || [];
+      if (pendingFiles.length > 0) {
+          const file = pendingFiles[0].file;
+          const base64Image = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = (error) => reject(error);
+              reader.readAsDataURL(file);
+          });
+          
+          return base64Image;
+      } else {
+          return 'Image';
+      }
+  },
     actions: [
       {
         type: 'upload',
@@ -500,6 +546,95 @@ export const TOOLS: Tool[] = [
         }
       }
     ]
+  },
+  {
+    id: 'text_to_speech',
+    label: 'Synthèse vocale',
+    icon: 'volume-high',
+    features: {
+      promptInput: {
+        placeholder: 'Entrez le texte à convertir en audio...',
+        multiline: true
+      }
+    },
+    configFields: [
+      {
+        name: 'language',
+        type: 'select',
+        label: 'Langue',
+        defaultValue: 'fr',
+        required: true,
+        options: [
+          { value: 'fr', label: 'Français' },
+          { value: 'en', label: 'Anglais' },
+          { value: 'es', label: 'Espagnol' },
+          { value: 'de', label: 'Allemand' }
+        ]
+      },
+      {
+        name: 'voice_path',
+        type: 'select',
+        label: 'Voix',
+        loading: true,
+        defaultValue: '',
+        required: true,
+        initAction: {
+          type: 'init'
+        }
+      }
+    ],
+    actions: [
+      {
+        type: 'send',
+        handler: 'handleTextToSpeech',
+        requiresInput: true,
+        generatingTxt: 'Génération audio en cours...',
+        generatingProgress: 0,
+        errorMessages: {
+          noInput: 'Veuillez entrer un texte à convertir',
+          generating: 'Une génération est déjà en cours',
+          apiError: 'Erreur lors de la génération audio'
+        },
+        api: {
+          path: '/ai/process',
+          method: 'POST',
+          streaming: true,
+          responseType: 'stream',
+          requestTransform: (params) => ({
+            tool: 'text_to_speech',
+            config: {
+              text: params.input,
+              voice_path: params.voice_path,
+              language: params.language || 'fr'
+            }
+          }),
+          responseTransform: (response) => {
+            if (response.status === 'completed') {
+              return `data:audio/wav;base64,${response.audio}`;
+            }
+            return response;
+          }
+        }
+      }
+    ],
+    api: {
+      init: {
+        path: '/ai/process',
+        method: 'POST',
+        responseType: 'json',
+        requestTransform: () => ({
+          tool: 'list_speech_models',
+          config: {}
+        }),
+        responseTransform: (response) => {
+          console.log(response);
+          return response.models.tts.xtts_v2.voices.map((voice: any) => ({
+            value: voice.path,
+            label: voice.label
+          }));
+        }
+      }
+    },
   }
 ];
 
