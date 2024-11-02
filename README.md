@@ -38,8 +38,8 @@ Une application React Native multiplateforme intégrant différents outils d'IA 
 
 ```bash
 # Cloner le repository
-git clone [url-du-repo]
-cd ai-tools-chatbot
+git clone https://github.com/kapwebdr/KwBotApp.git
+cd KwBotApp
 
 # Installer les dépendances
 yarn install
@@ -52,7 +52,6 @@ npm install
 1. Créer un fichier `.env` à la racine du projet :
 ```env
 BASE_API_URL=http://votre-api-url
-BASE_WS_URL=ws://votre-ws-url
 ```
 
 2. Configurer les modèles et endpoints dans `src/types.ts` selon votre backend
@@ -136,10 +135,27 @@ expo build:android
 4. Push la branche (`git push origin feature/amazing-feature`)
 5. Ouvrir une Pull Request
 
-## Licence
+## License
 
-[Votre licence]
+Apache License 2.0
+
+Copyright 2024 Kapweb
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 ## Contact
 
-[Vos informations de contact]
+**Kapweb**  
+Damien RICHARD  
+Site web : [http://www.kapweb.com](http://www.kapweb.com)  
+GitHub : [https://github.com/kapwebdr](https://github.com/kapwebdr)
