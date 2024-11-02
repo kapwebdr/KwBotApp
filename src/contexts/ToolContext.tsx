@@ -145,6 +145,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (toolAction.api.streaming) {
+        console.log('streaming');
         let streamContent = '';
         await apiHandler.executeApiAction(
           currentTool,
@@ -157,6 +158,14 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setMessages([
               ...newMessages.slice(0, -1),
               { role: 'assistant', content: streamContent } as Message
+            ]);
+          },
+          (response) => {
+            loading.stopLoading();
+            console.log('response',response);
+            setMessages([
+              ...newMessages.slice(0, -1),
+              { role: 'assistant', content: response } as Message
             ]);
           }
         );

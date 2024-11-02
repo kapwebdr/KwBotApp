@@ -1,4 +1,4 @@
-export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech';
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -626,7 +626,6 @@ export const TOOLS: Tool[] = [
           config: {}
         }),
         responseTransform: (response) => {
-          console.log(response);
           return response.models.tts.xtts_v2.voices.map((voice: any) => ({
             value: voice.path,
             label: voice.label
@@ -655,6 +654,92 @@ export const TOOLS: Tool[] = [
         }
       }
     ]
+  },
+  {
+    id: 'speech_to_text',
+    label: 'Reconnaissance Vocale',
+    icon: 'mic',
+    features: {
+      fileUpload: {
+        accept: ['audio/*'],
+        multiple: false,
+        base64Input: true
+      }
+    },
+    configFields: [
+      {
+        name: 'model_size',
+        type: 'select',
+        label: 'Modèle',
+        loading: true,
+        defaultValue: '',
+        required: true,
+        initAction: {
+          type: 'init'
+        }
+      }
+    ],
+    actions: [
+      {
+        type: 'upload',
+        handler: 'handleSpeechToText',
+        errorMessages: {
+          noFile: 'Veuillez sélectionner un fichier audio',
+          apiError: 'Erreur lors de la transcription'
+        },
+        api: {
+          path: '/ai/process',
+          method: 'POST',
+          streaming: true,
+          responseType: 'stream',
+          streamProcessor: (chunk: any) => {
+            console.log(chunk);
+            return chunk.segment.text;
+          },
+          requestTransform: (params) => ({
+            tool: 'speech_to_text',
+            config: {
+              audio: params.base64,
+              stream: true,
+              model_size: params.model_size
+            }
+          })
+        }
+      }
+    ],
+    api: {
+      init: {
+        path: '/ai/process',
+        method: 'POST',
+        responseType: 'json',
+        requestTransform: () => ({
+          tool: 'list_speech_models',
+          config: {}
+        }),
+        responseTransform: (response) => {
+          return response.models.stt.whisper.sizes.map((size: string) => ({
+            value: size,
+            label: `Whisper ${size.charAt(0).toUpperCase() + size.slice(1)}`
+          }));
+        }
+      }
+    },
+    userBubbleContent: async (toolState: ToolState) => {
+      const pendingFiles = toolState.pendingFiles || [];
+      if (pendingFiles.length > 0) {
+        const file = pendingFiles[0].file;
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
+        
+        return base64Audio;
+      } else {
+        return 'Audio';
+      }
+    }
   }
 ];
 
@@ -752,7 +837,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     id: 'audio',
     label: 'Audio',
     icon: 'volume-high',
-    tools: ['text_to_speech']
+    tools: ['text_to_speech','speech_to_text']
   }
 ];
 

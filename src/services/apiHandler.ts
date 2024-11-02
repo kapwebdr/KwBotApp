@@ -34,6 +34,7 @@ class ApiHandler {
     actionType: ActionType,
     params?: any,
     onProgress?: (progress: number) => void,
+    onChunk?: (chunk: any) => void,
     onComplete?: (result: any) => void
   ) {
     const tool = TOOLS.find(t => t.id === toolId);
@@ -78,7 +79,7 @@ class ApiHandler {
         await this.updateSessionId(newSessionId);
       }
       if (endpoint.streaming) {
-        return this.handleStreamResponse(response, endpoint, onProgress, onComplete);
+        return this.handleStreamResponse(response, endpoint, onProgress, onChunk, onComplete);
       }
 
       const data = await response.json();
@@ -99,6 +100,7 @@ class ApiHandler {
     response: Response,
     endpoint: ApiEndpoint,
     onProgress?: (progress: number) => void,
+    onChunk?: (chunk: any) => void,
     onComplete?: (result: any) => void
   ) {
     const reader = response.body?.getReader();
@@ -121,25 +123,27 @@ class ApiHandler {
             if (chunk.trim() === '[DONE]') {
               return true;
             }
-
-            const processedChunk = endpoint.streamProcessor ? 
-              endpoint.streamProcessor(chunk) : 
-              chunk;
             
-            if (!processedChunk) continue;
+            if (!chunk) continue;
             try {
-              const data = JSON.parse(processedChunk);
+              const data = JSON.parse(chunk);
               if (data.progress !== undefined && onProgress) {
                 onProgress(data.progress);
               }
+              else if (onChunk)
+              {
+                const result = endpoint.streamProcessor ? endpoint.streamProcessor(data) : data;
+                onChunk(result);
+              }
+              
               if (data.status === 'completed' && onComplete) {
                 const result = endpoint.responseTransform ? endpoint.responseTransform(data) : data;
                 onComplete(result);
               }
             } catch {
-              if (onComplete) {
-                const result = endpoint.responseTransform ? endpoint.responseTransform(processedChunk) : processedChunk;
-                onComplete(result);
+              if (onChunk) {
+                const result = endpoint.streamProcessor ? endpoint.streamProcessor(chunk) : chunk;
+                onChunk(result);
               }
             }
           }
