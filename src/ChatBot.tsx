@@ -11,8 +11,7 @@ import { ConversationProvider } from './contexts/ConversationContext';
 import { ToolProvider } from './contexts/ToolContext';
 import { useTheme } from './contexts/ThemeContext';
 import { BottomTabNavigator } from './navigation/BottomTabNavigator';
-import { SystemWebSocket, SystemMetrics } from './services/websocket';
-import { SystemStatus } from './components/SystemStatus';
+import { Monitoring } from './components/Monitoring';
 import { ThemeSelector } from './components/ThemeSelector';
 
 const SIDEBAR_WIDTH = 250;
@@ -83,7 +82,7 @@ const ChatBot: React.FC = () => {
                 <Ionicons name="menu" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
 
-             {/* <SystemStatus status={systemStatus} metrics={systemMetrics} /> */} 
+              <Monitoring />
 
               <ThemeSelector />
             </View>

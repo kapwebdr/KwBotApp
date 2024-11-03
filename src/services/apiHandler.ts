@@ -108,49 +108,71 @@ class ApiHandler {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let textBuffer = '';
+    
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const chunk = line.slice(6);
+            buffer += decoder.decode(value, { stream: true });
             
-            if (chunk.trim() === '[DONE]') {
-              return true;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const chunk = line.slice(6);
+                    
+                    if (chunk.trim() === '[DONE]') {
+                        if (textBuffer && onChunk) {
+                            onChunk(textBuffer);
+                        }
+                        return true;
+                    }
+                    
+                    try {
+                        // Essayer de parser en JSON
+                        const data = JSON.parse(chunk);
+                        if (data.progress !== undefined && onProgress) {
+                            onProgress(data.progress);
+                        } else if (onChunk) {
+                            const result = endpoint.streamProcessor ? 
+                                endpoint.streamProcessor(data) : data;
+                            onChunk(result);
+                        }
+                        
+                        if (data.status === 'completed' && onComplete) {
+                            const result = endpoint.responseTransform ? 
+                                endpoint.responseTransform(data) : data;
+                            onComplete(result);
+                        }
+                    } catch {
+                        // Si ce n'est pas du JSON, traiter le texte
+                        if (chunk.includes('\\n')) {
+                            // Remplacer les \n littéraux par de vrais retours à la ligne
+                            const processedChunk = chunk.replace(/\\n/g, '\n');
+                            if (onChunk) {
+                                onChunk(processedChunk);
+                            }
+                        } else {
+                            // Ajouter le chunk au buffer
+                            textBuffer += chunk;
+                            if (onChunk) {
+                                onChunk(chunk);
+                            }
+                        }
+                    }
+                }
             }
-            
-            if (!chunk) continue;
-            try {
-              const data = JSON.parse(chunk);
-              if (data.progress !== undefined && onProgress) {
-                onProgress(data.progress);
-              }
-              else if (onChunk)
-              {
-                const result = endpoint.streamProcessor ? endpoint.streamProcessor(data) : data;
-                onChunk(result);
-              }
-              
-              if (data.status === 'completed' && onComplete) {
-                const result = endpoint.responseTransform ? endpoint.responseTransform(data) : data;
-                onComplete(result);
-              }
-            } catch {
-              if (onChunk) {
-                const result = endpoint.streamProcessor ? endpoint.streamProcessor(chunk) : chunk;
-                onChunk(result);
-              }
-            }
-          }
         }
-      }
+        
+        // Envoyer le reste du buffer si nécessaire
+        if (textBuffer && onChunk) {
+            onChunk(textBuffer);
+        }
     } finally {
-      reader.releaseLock();
+        reader.releaseLock();
     }
 
     return true;

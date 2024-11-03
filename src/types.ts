@@ -9,6 +9,7 @@ export interface ToolConfig {
   labels?: string[];
   fromLang?: string;
   toLang?: string;
+  tts?: TTSConfig;
   [key: string]: any;
 }
 
@@ -112,6 +113,7 @@ export interface Tool {
   userBubbleContent?:(response: any) => any;
   api?: {
     init?: ApiEndpoint;
+    speech?: ApiEndpoint;
     load?: ApiEndpoint;
   };
 }
@@ -150,7 +152,7 @@ export const TOOLS: Tool[] = [
         label: 'Message système',
         defaultValue: 'Tu es un assistant utile et amical.',
         placeholder: 'Entrez le message système...'
-      }
+      },
     ],
     actions: [
       {
@@ -176,8 +178,14 @@ export const TOOLS: Tool[] = [
               system: params.system,
               prompt: params.input,
               stream: true,
-              messages: params.messages
-          })
+              messages: params.messages,
+              format_type: "encoded"
+          }),
+          streamProcessor: (chunk: any) => {
+            if (chunk.text) {
+              return chunk.text;
+            }
+          }
         }
       }
     ],
@@ -393,10 +401,7 @@ export const TOOLS: Tool[] = [
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
-            tool: 'ocr',
-            config: {
               image: params.base64
-            },
           }),
           responseTransform: (response) => response.text
         }
@@ -559,7 +564,7 @@ export const TOOLS: Tool[] = [
         ]
       },
       {
-        name: 'voice_path',
+        name: 'voice',
         type: 'select',
         label: 'Voix',
         loading: true,
@@ -589,11 +594,14 @@ export const TOOLS: Tool[] = [
           responseType: 'stream',
           requestTransform: (params) => ({
               text: params.input,
-              voice_path: params.voice_path,
+              voice: params.voice,
               language: params.language || 'fr'
           }),
           responseTransform: (response) => {
             if (response.status === 'completed') {
+              const base64Audio = `data:audio/wav;base64,${response.audio}`;
+              const audio = new Audio(base64Audio);
+              audio.play();
               return `data:audio/wav;base64,${response.audio}`;
             }
             return response;
@@ -616,27 +624,6 @@ export const TOOLS: Tool[] = [
         }
       }
     },
-  },
-  {
-    id: 'system_metrics',
-    label: 'Métriques Système',
-    icon: 'stats-chart',
-    actions: [
-      {
-        type: 'execute',
-        handler: 'handleSystemMetrics',
-        api: {
-          path: '/ai/process',
-          method: 'POST',
-          responseType: 'json',
-          requestTransform: () => ({
-            tool: 'system_metrics',
-            config: {}
-          }),
-          responseTransform: (response) => response as SystemMetrics
-        }
-      }
-    ]
   },
   {
     id: 'speech_to_text',
@@ -704,13 +691,13 @@ export const TOOLS: Tool[] = [
           method: 'POST',
           streaming: true,
           responseType: 'stream',
-          requestTransform: (audioBlob: Blob) => {
-            return {
-                audio: audioBlob,
-                stream: true,
-                model_size: 'medium' // Utilise la valeur du select model_size
-            }
-          },
+          // requestTransform: (audioBlob: Blob) => {
+          //   return {
+          //       audio: audioBlob,
+          //       stream: true,
+          //       model_size: 'medium' // Utilise la valeur du select model_size
+          //   }
+          // },
           streamProcessor: (chunk: any) => {
             console.log(chunk);
             return chunk.segment.text;
@@ -753,6 +740,111 @@ export const TOOLS: Tool[] = [
       } else {
         return 'Audio';
       }
+    }
+  },
+  {
+    id: 'monitoring',
+    label: 'Monitoring',
+    icon: 'analytics',
+    actions: [
+      {
+        type: 'systemStats',
+        handler: 'handleSystemStats',
+        api: {
+          path: '/monitor/system/stats',
+          method: 'GET',
+          responseType: 'json'
+        }
+      },
+      {
+        type: 'containersList',
+        handler: 'handleContainersList',
+        api: {
+          path: '/monitor/containers',
+          method: 'GET',
+          responseType: 'json'
+        }
+      },
+      {
+        type: 'execute',
+        handler: 'handleContainerAction',
+        api: {
+          path: '/monitor/containers/{containerId}/{action}',
+          method: 'POST',
+          responseType: 'json'
+        }
+      }
+    ]
+  },
+  {
+    id: 'audio_chat',
+    label: 'Chat Audio',
+    icon: 'mic-circle',
+    features: {
+      promptInput: {
+        placeholder: 'Tapez votre message...',
+        multiline: true,
+      },
+      fileUpload: {
+        accept: ['audio/*'],
+        multiple: false,
+        base64Input: true
+      }
+    },
+    configFields: [
+      {
+        name: 'micro',
+        type: 'micro',
+        label: 'Micro',
+        onSelect: {
+          action: 'execute',
+          paramName: 'audio'
+        }
+      }
+    ],
+    actions: [
+      {
+        type: 'send',
+        handler: 'handleAudioChat',
+        api: {
+          path: '/ai/chaining/chat',
+          method: 'POST',
+          streaming: true,
+          responseType: 'stream',
+          requestTransform: (params) => {
+            return {
+            text: params.input || undefined,
+              audio: params.audio || undefined
+            }
+          },
+          streamProcessor: (chunk: any) => {
+            if (chunk.type === 'text') {
+              return chunk.content;
+            } else if (chunk.type === 'audio') {
+              const base64Audio = `data:audio/wav;base64,${chunk.content}`;
+              const audio = new Audio(base64Audio);
+              audio.play();
+              return null;
+            }
+            return null;
+          }
+        }
+      }
+    ],
+    userBubbleContent: async (toolState: ToolState) => {
+      const pendingFiles = toolState.pendingFiles || [];
+      if (pendingFiles.length > 0) {
+        const file = pendingFiles[0].file;
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
+        
+        return base64Audio;
+      }
+      return toolState.input || 'Message';
     }
   }
 ];
@@ -833,7 +925,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     id: 'chat',
     label: 'Chat',
     icon: 'chatbubbles',
-    tools: ['llm']
+    tools: ['llm', 'audio_chat']
   },
   {
     id: 'image',
@@ -888,4 +980,43 @@ export interface SystemMetrics {
     memory_total: number;
     temperature: number;
   }[];
+}
+
+export interface SystemStats {
+  cpu_percent: number;
+  memory: {
+    total: number;
+    available: number;
+    percent: number;
+  };
+  disk: {
+    total: number;
+    used: number;
+    free: number;
+    percent: number;
+  };
+}
+
+export interface ContainerStats {
+  cpu_percent: number;
+  memory_percent: number;
+  memory_usage: number;
+  memory_limit: number;
+}
+
+export interface Container {
+  id: string;
+  name: string;
+  status: string;
+  image: string;
+  created: string;
+  ports: Record<string, any>;
+  stats: ContainerStats;
+}
+
+// Ajout d'une interface pour la configuration TTS
+interface TTSConfig {
+  enabled: boolean;
+  voice_path: string;
+  language: string;
 }
