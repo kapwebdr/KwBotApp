@@ -48,7 +48,7 @@ export const SystemStatus: React.FC = () => {
 
   useEffect(() => {
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 10000);
+    const interval = setInterval(fetchMetrics, 60000);
     return () => clearInterval(interval);
   }, []);
 

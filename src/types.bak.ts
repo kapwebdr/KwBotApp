@@ -167,23 +167,26 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'appel à l\'API'
         },
         api: {
-          path: '/ai/generate',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
           requestTransform: (params) => ({
+            tool: 'llm',
+            config: {
               model: params.model,
               system: params.system,
               prompt: params.input,
               stream: true,
               messages: params.messages
+            },
           })
         }
       }
     ],
     api: {
       init: {
-        path: '/ai/models',
+        path: '/ai/process',
         method: 'POST',
         responseType: 'json',
         requestTransform: () => ({
@@ -193,13 +196,16 @@ export const TOOLS: Tool[] = [
         responseTransform: (response) => response.models
       },
       load: {
-        path: '/ai/load_model',
+        path: '/ai/process',
         method: 'POST',
         streaming: true,
         responseType: 'stream',
         loadingTxt: 'Chargement du modèle en cours...',
         requestTransform: (params) => ({
+          tool: 'load_model',
+          config: {
             model_name: params.modelId
+          }
         }),
       }
     }
@@ -279,11 +285,13 @@ export const TOOLS: Tool[] = [
         },
         
         api: {
-          path: '/ai/image/generate',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
           requestTransform: (params) => ({
+            tool: 'image_generation',
+            config: {
               model_type: params.image_model,
               prompt: params.input,
               // negative_prompt: params.negative_prompt,
@@ -291,6 +299,7 @@ export const TOOLS: Tool[] = [
               height: params.height,
               steps: params.steps,
               strength: params.strength
+            },
           }),
           responseTransform: (response) => {
             return `data:image/png;base64,${response.image}`;
@@ -300,7 +309,7 @@ export const TOOLS: Tool[] = [
     ],
     api: {
       init: {
-        path: '/ai/images/models',
+        path: '/ai/process',
         method: 'POST',
         responseType: 'json',
         requestTransform: () => ({
@@ -342,7 +351,7 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'analyse de l\'image'
         },
         api: {
-          path: '/ai/image/analyze',
+          path: '/images/analyze',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
@@ -389,7 +398,7 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'extraction du texte'
         },
         api: {
-          path: '/ai/image/ocr',
+          path: '/ai/process',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
@@ -459,7 +468,7 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de l\'amélioration de l\'image'
         },
         api: {
-          path: '/ai/image/refine',
+          path: '/images/refine',
           method: 'POST',
           streaming: true,
           responseType: 'base64',
@@ -520,14 +529,17 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de la traduction'
         },
         api: {
-          path: '/ai/translation/translate',
+          path: '/ai/process',
           method: 'POST',
           responseType: 'json',
           loadingTxt: 'Traduction en cours...',
           requestTransform: (params) => ({
+            tool: 'translation',
+            config: {
               text: params.input,
               from_lang: params.fromLang || 'fr',
               to_lang: params.toLang || 'en'
+            },
           }),
           responseTransform: (response) => response.translated_text
         }
@@ -583,14 +595,17 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de la génération audio'
         },
         api: {
-          path: '/ai/speech/text-to-speech',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
           requestTransform: (params) => ({
+            tool: 'text_to_speech',
+            config: {
               text: params.input,
               voice_path: params.voice_path,
               language: params.language || 'fr'
+            }
           }),
           responseTransform: (response) => {
             if (response.status === 'completed') {
@@ -603,10 +618,12 @@ export const TOOLS: Tool[] = [
     ],
     api: {
       init: {
-        path: '/ai/speech/models',
+        path: '/ai/process',
         method: 'POST',
         responseType: 'json',
         requestTransform: () => ({
+          tool: 'list_speech_models',
+          config: {}
         }),
         responseTransform: (response) => {
           return response.models.tts.xtts_v2.voices.map((voice: any) => ({
@@ -681,7 +698,7 @@ export const TOOLS: Tool[] = [
           apiError: 'Erreur lors de la transcription'
         },
         api: {
-          path: '/ai/speech/speech-to-text',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
@@ -690,9 +707,12 @@ export const TOOLS: Tool[] = [
             return chunk.segment.text;
           },
           requestTransform: (params) => ({
+            tool: 'speech_to_text',
+            config: {
               audio: params.base64,
               stream: true,
               model_size: params.model_size
+            }
           })
         }
       },
@@ -700,15 +720,19 @@ export const TOOLS: Tool[] = [
         type: 'execute',
         handler: 'handleSpeechToText',
         api: {
-          path: '/ai/speech/speech-to-text',
+          path: '/ai/process',
           method: 'POST',
           streaming: true,
           responseType: 'stream',
           requestTransform: (audioBlob: Blob) => {
+            console.log('YO');
             return {
+              tool: 'speech_to_text',
+              config: {
                 audio: audioBlob,
                 stream: true,
                 model_size: 'medium' // Utilise la valeur du select model_size
+              }
             }
           },
           streamProcessor: (chunk: any) => {
@@ -716,19 +740,24 @@ export const TOOLS: Tool[] = [
             return chunk.segment.text;
           },
           requestTransform: (params) => ({
+            tool: 'speech_to_text',
+            config: {
               audio: params.audio,
               stream: true,
               model_size: params.model_size
+            }
           })
         }
       }
     ],
     api: {
       init: {
-        path: '/ai/speech/models',
+        path: '/ai/process',
         method: 'POST',
         responseType: 'json',
         requestTransform: () => ({
+          tool: 'list_speech_models',
+          config: {}
         }),
         responseTransform: (response) => {
           return response.models.stt.whisper.sizes.map((size: string) => ({

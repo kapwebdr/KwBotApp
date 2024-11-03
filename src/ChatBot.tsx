@@ -83,7 +83,7 @@ const ChatBot: React.FC = () => {
                 <Ionicons name="menu" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
 
-              <SystemStatus status={systemStatus} metrics={systemMetrics} />
+             {/* <SystemStatus status={systemStatus} metrics={systemMetrics} /> */} 
 
               <ThemeSelector />
             </View>
