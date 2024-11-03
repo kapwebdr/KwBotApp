@@ -195,8 +195,6 @@ export const TOOLS: Tool[] = [
         method: 'POST',
         responseType: 'json',
         requestTransform: () => ({
-          tool: 'list_models',
-          config: {}
         }),
         responseTransform: (response) => response.models
       },
@@ -238,7 +236,7 @@ export const TOOLS: Tool[] = [
         name: 'width',
         type: 'number',
         label: 'Largeur',
-        defaultValue: 512,
+        defaultValue: 256,
         min: 256,
         max: 1024,
         step: 64
@@ -247,7 +245,7 @@ export const TOOLS: Tool[] = [
         name: 'height',
         type: 'number',
         label: 'Hauteur',
-        defaultValue: 512,
+        defaultValue: 256,
         min: 256,
         max: 1024,
         step: 64
@@ -256,7 +254,7 @@ export const TOOLS: Tool[] = [
         name: 'steps',
         type: 'number',
         label: 'Étapes',
-        defaultValue: 50,
+        defaultValue: 20,
         min: 1,
         max: 100,
         step: 1
@@ -308,12 +306,10 @@ export const TOOLS: Tool[] = [
     ],
     api: {
       init: {
-        path: '/ai/images/models',
+        path: '/ai/image/models',
         method: 'POST',
         responseType: 'json',
         requestTransform: () => ({
-          tool: 'list_image_models',
-          config: {}
         }),
         responseTransform: (response) => {
           return Object.keys(response.models);
