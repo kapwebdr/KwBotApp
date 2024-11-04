@@ -35,6 +35,9 @@ export const lightTheme: Theme = {
     gray900: '#1A1A1A',
     gray950: '#0D0D0D',
     gray1000: '#000000',
+    codeBackground: '#1E1E1E',
+    codeBorder: '#323232',
+    codeText: '#D4D4D4',
   },
   fontSizes: {
     small: 12,
@@ -77,6 +80,9 @@ export const darkTheme: Theme = {
     gray900: '#6A6B6E',
     gray950: '#6E6F72',
     gray1000: '#727376',
+    codeBackground: '#1E1E1E',
+    codeBorder: '#323232',
+    codeText: '#D4D4D4',
   },
   fontSizes: {
     small: 12,
@@ -119,6 +125,9 @@ export const dimTheme: Theme = {
     gray900: '#6A6B6E',
     gray950: '#6E6F72',
     gray1000: '#727376',
+    codeBackground: '#1E1E1E',
+    codeBorder: '#323232',
+    codeText: '#D4D4D4',
   },
   fontSizes: {
     small: 12,
@@ -161,6 +170,9 @@ export const oceanTheme: Theme = {
     gray900: '#6A6B6E',
     gray950: '#6E6F72',
     gray1000: '#727376',
+    codeBackground: '#1E1E1E',
+    codeBorder: '#323232',
+    codeText: '#D4D4D4',
   },
   fontSizes: {
     small: 12,
@@ -203,6 +215,9 @@ export const forestTheme: Theme = {
     gray900: '#6A6B6E',
     gray950: '#6E6F72',
     gray1000: '#727376',
+    codeBackground: '#1E1E1E',
+    codeBorder: '#323232',
+    codeText: '#D4D4D4',
   },
   fontSizes: {
     small: 12,

@@ -889,6 +889,78 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     toolSubmenuTextSelected: {
       color: theme.colors.primary,
     },
+    codeBlockContainer: {
+      backgroundColor: theme.colors.codeBackground,
+      borderRadius: 8,
+      marginVertical: 8,
+      overflow: 'hidden',
+    },
+    codeBlockHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 8,
+      backgroundColor: theme.colors.codeBorder,
+    },
+    codeBlockLanguage: {
+      color: theme.colors.codeText,
+      fontSize: 12,
+      fontFamily: 'monospace',
+    },
+    codeBlockContent: {
+      padding: 12,
+      fontFamily: 'monospace',
+    },
+    fileManager: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    toolbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    toolbarButton: {
+      padding: 8,
+      borderRadius: 4,
+      marginRight: 8,
+    },
+    currentPath: {
+      flex: 1,
+      color: theme.colors.text,
+      fontSize: 14,
+    },
+    fileList: {
+      flex: 1,
+    },
+    fileItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    fileItemSelected: {
+      backgroundColor: `${theme.colors.primary}20`,
+    },
+    fileName: {
+      flex: 1,
+      marginLeft: 12,
+      color: theme.colors.text,
+      fontSize: 14,
+    },
+    fileSize: {
+      color: theme.colors.text,
+      fontSize: 12,
+      opacity: 0.7,
+    },
+    loadingText: {
+      padding: 20,
+      textAlign: 'center',
+      color: theme.colors.text,
+    },
   });
 };
 

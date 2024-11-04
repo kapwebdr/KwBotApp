@@ -5,10 +5,63 @@ import { Message } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
 import * as FileSystem from 'expo-file-system';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface MessageBubbleProps {
   message: Message;
 }
+
+// Fonction utilitaire pour détecter le code dans le message
+const detectCodeBlock = (content: string) => {
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const matches = [...content.matchAll(codeBlockRegex)];
+  
+  if (matches.length === 0) return null;
+  
+  return matches.map(match => ({
+    language: match[1] || 'text',
+    code: match[2].trim()
+  }));
+};
+
+// Fonction pour rendre le texte avec la coloration syntaxique
+const renderTextWithCodeBlocks = (content: string, textStyle: any, styles: any) => {
+  const codeBlocks = detectCodeBlock(content);
+  
+  if (!codeBlocks) {
+    return <Text style={textStyle}>{content}</Text>;
+  }
+
+  const parts = content.split(/```(\w+)?\n[\s\S]*?```/);
+  
+  return (
+    <View>
+      {parts.map((part, index) => {
+        if (index % 2 === 0) {
+          return part ? <Text key={index} style={textStyle}>{part}</Text> : null;
+        }
+        const codeBlock = codeBlocks[Math.floor(index / 2)];
+        return (
+          <View key={index} style={styles.codeBlockContainer}>
+            <SyntaxHighlighter
+              language={codeBlock.language}
+              style={vscDarkPlus}
+              customStyle={{
+                padding: 12,
+                borderRadius: 8,
+                marginVertical: 8,
+                fontSize: 14,
+              }}
+            >
+              {codeBlock.code}
+            </SyntaxHighlighter>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message
@@ -105,15 +158,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </audio>
       );
     } else {
-      return (
-        <Text
-          style={[
-            styles.messageText,
-            isAI ? styles.aiText : styles.userText,
-          ]}
-        >
-          {message.content}
-        </Text>
+      return renderTextWithCodeBlocks(
+        message.content,
+        [
+          styles.messageText,
+          isAI ? styles.aiText : styles.userText,
+        ],
+        styles
       );
     }
   };

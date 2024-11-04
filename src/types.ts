@@ -1,4 +1,4 @@
-export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text';
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -79,7 +79,7 @@ export interface ApiEndpoint {
   responseType?: 'json' | 'stream' | 'base64';
   requestTransform?: (params: any) => any;
   responseTransform?: (response: any) => any;
-  streamProcessor?: (chunk: string) => string;
+  streamProcessor?: (chunk: any) => string;
   headers?: Record<string, string>;
   loadingTxt?: string;
 }
@@ -159,8 +159,6 @@ export const TOOLS: Tool[] = [
         type: 'send',
         handler: 'handleChatAction',
         requiresInput: true,
-        requiresModel: true,
-        requiresModelLoaded: true,
         errorMessages: {
           noInput: 'Veuillez entrer un message',
           noModel: 'Veuillez sélectionner un modèle',
@@ -231,6 +229,11 @@ export const TOOLS: Tool[] = [
         initAction: {
           type: 'init',
         },
+        onSelect: {
+          action: 'load',
+          paramName: 'modelId',
+          replaceInPath: '{modelId}'
+        }
       },
       {
         name: 'width',
@@ -314,6 +317,16 @@ export const TOOLS: Tool[] = [
         responseTransform: (response) => {
           return Object.keys(response.models);
         }
+      },
+      load: {
+        path: '/ai/image/load_model',
+        method: 'POST',
+        streaming: true,
+        responseType: 'stream',
+        loadingTxt: 'Chargement du modèle en cours...',
+        requestTransform: (params) => ({
+          model_type: params.modelId
+        }),
       }
     }
   },
@@ -523,14 +536,21 @@ export const TOOLS: Tool[] = [
         api: {
           path: '/ai/translation/translate',
           method: 'POST',
-          responseType: 'json',
+          responseType: 'stream',
+          streaming: true,
           loadingTxt: 'Traduction en cours...',
           requestTransform: (params) => ({
+              stream: true,
               text: params.input,
               from_lang: params.fromLang || 'fr',
               to_lang: params.toLang || 'en'
           }),
-          responseTransform: (response) => response.translated_text
+          streamProcessor: (chunk: any) => {
+            return null;
+          },
+          responseTransform: (response) => {
+            return  response.translated_text
+          }
         }
       }
     ]
@@ -842,6 +862,99 @@ export const TOOLS: Tool[] = [
       }
       return toolState.input || 'Message';
     }
+  },
+  {
+    id: 'files',
+    label: 'Gestionnaire de fichiers',
+    icon: 'folder',
+    features: {
+      fileUpload: {
+        accept: ['*/*'],
+        multiple: true,
+        dragDrop: true
+      }
+    },
+    configFields: [
+      {
+        name: 'currentPath',
+        type: 'text',
+        label: 'Chemin courant',
+        defaultValue: '/',
+      }
+    ],
+    actions: [
+      {
+        type: 'upload',
+        handler: 'handleFileUpload',
+        errorMessages: {
+          apiError: 'Erreur lors du téléchargement des fichiers'
+        },
+        api: {
+          path: '/v1/files/upload',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => {
+            const formData = new FormData();
+            if (params.files) {
+              params.files.forEach((file: File) => {
+                formData.append('files', file);
+              });
+            }
+            formData.append('path', params.currentPath || '/');
+            return formData;
+          }
+        }
+      },
+      {
+        type: 'execute',
+        handler: 'handleListDirectory',
+        api: {
+          path: '/v1/files/list/{path}',
+          method: 'GET',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            path: params.currentPath || '/'
+          })
+        }
+      },
+      {
+        type: 'execute',
+        handler: 'handleCreateDirectory',
+        api: {
+          path: '/v1/files/directory/create',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            path: `${params.currentPath}/${params.directoryName}`
+          })
+        }
+      },
+      {
+        type: 'execute',
+        handler: 'handleDeleteFile',
+        api: {
+          path: '/v1/files/delete',
+          method: 'DELETE',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            path: params.filePath
+          })
+        }
+      },
+      {
+        type: 'execute',
+        handler: 'handleMoveFile',
+        api: {
+          path: '/v1/files/move',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            source: params.sourcePath,
+            destination: params.destinationPath
+          })
+        }
+      }
+    ]
   }
 ];
 
@@ -940,6 +1053,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
     label: 'Audio',
     icon: 'volume-high',
     tools: ['text_to_speech','speech_to_text']
+  },
+  {
+    id: 'files',
+    label: 'Fichiers',
+    icon: 'folder',
+    tools: ['files']
   }
 ];
 
@@ -1015,4 +1134,13 @@ interface TTSConfig {
   enabled: boolean;
   voice_path: string;
   language: string;
+}
+
+export interface FileItem {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size?: number;
+  modified?: string;
+  extension?: string;
 }

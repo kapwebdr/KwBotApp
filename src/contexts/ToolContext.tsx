@@ -152,16 +152,17 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
           params,
           loading.updateProgress,
           (chunk) => {
-            loading.stopLoading();
-            streamContent += chunk;
-            setMessages([
-              ...newMessages.slice(0, -1),
-              { role: 'assistant', content: streamContent } as Message
-            ]);
+            if (chunk !== null){
+              streamContent += chunk;
+              loading.stopLoading();
+              setMessages([
+                ...newMessages.slice(0, -1),
+                { role: 'assistant', content: streamContent } as Message
+              ]);
+            }
           },
           (response) => {
             loading.stopLoading();
-            console.log('response',response);
             setMessages([
               ...newMessages.slice(0, -1),
               { role: 'assistant', content: response } as Message
