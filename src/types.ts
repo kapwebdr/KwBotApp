@@ -1,3 +1,5 @@
+import FileManager from './components/FileManager';
+
 export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files';
 export interface ToolConfig {
   model?: string;
@@ -110,7 +112,9 @@ export interface Tool {
   configFields?: ToolConfigField[];
   defaultConfig?: ToolConfig;
   actions: ToolAction[];
-  userBubbleContent?:(response: any) => any;
+  customComponent?: string;
+  useMessagesSystem?: boolean;
+  userBubbleContent?: (response: any) => any;
   api?: {
     init?: ApiEndpoint;
     speech?: ApiEndpoint;
@@ -867,6 +871,8 @@ export const TOOLS: Tool[] = [
     id: 'files',
     label: 'Gestionnaire de fichiers',
     icon: 'folder',
+    customComponent: 'FileManager',
+    useMessagesSystem: false,
     features: {
       fileUpload: {
         accept: ['*/*'],
@@ -1144,3 +1150,8 @@ export interface FileItem {
   modified?: string;
   extension?: string;
 }
+
+export const CUSTOM_COMPONENTS: Record<string, React.ComponentType> = {
+  'FileManager': FileManager,
+  // Ajouter d'autres composants ici au besoin
+};

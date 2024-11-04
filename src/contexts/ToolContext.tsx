@@ -108,6 +108,22 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const toolAction = tool.actions?.find(a => a.type === actionType);
     if (!toolAction) return;
 
+    // Si l'outil n'utilise pas le système de messages, exécuter simplement l'action
+    if (!tool.useMessagesSystem) {
+      try {
+        const result = await apiHandler.executeApiAction(
+          currentTool,
+          actionType,
+          args[0],
+          loading.updateProgress
+        );
+        return result;
+      } catch (error) {
+        console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
+        throw error;
+      }
+    }
+
     const missingFields = tool.configFields
     ?.filter(field => field.required && !toolStates[currentTool]?.config[field.name])
     .map(field => field.name);

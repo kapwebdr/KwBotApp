@@ -961,6 +961,114 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       textAlign: 'center',
       color: theme.colors.text,
     },
+    fileManagerContainer: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      height: '100%',
+    },
+    fileManagerToolbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.gray50,
+    },
+    breadcrumb: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      flexWrap: 'wrap',
+    },
+    breadcrumbItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 4,
+      borderRadius: 4,
+    },
+    breadcrumbText: {
+      color: theme.colors.text,
+      fontSize: 14,
+    },
+    breadcrumbSeparator: {
+      color: theme.colors.text,
+      marginHorizontal: 4,
+      opacity: 0.5,
+    },
+    toolbarActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    toolbarButton: {
+      padding: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.gray100,
+    },
+    newFolderInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: theme.colors.inputBackground,
+      borderRadius: 4,
+      padding: 8,
+      marginRight: 8,
+      color: theme.colors.text,
+    },
+    inputButton: {
+      padding: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.gray100,
+      marginLeft: 4,
+    },
+    fileListContainer: {
+      flex: 1,
+      position: 'relative',
+    },
+    dragOver: {
+      backgroundColor: `${theme.colors.primary}10`,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      borderStyle: 'dashed',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    fileList: {
+      flex: 1,
+    },
+    fileItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    fileItemSelected: {
+      backgroundColor: `${theme.colors.primary}20`,
+    },
+    fileDetails: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    fileName: {
+      color: theme.colors.text,
+      fontSize: 14,
+    },
+    fileInfo: {
+      color: theme.colors.text,
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 2,
+    },
   });
 };
 

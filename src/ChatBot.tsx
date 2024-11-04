@@ -13,6 +13,8 @@ import { useTheme } from './contexts/ThemeContext';
 import { BottomTabNavigator } from './navigation/BottomTabNavigator';
 import { Monitoring } from './components/Monitoring';
 import { ThemeSelector } from './components/ThemeSelector';
+import { useTool } from './hooks/useTool';
+import { CUSTOM_COMPONENTS } from './types';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -25,6 +27,9 @@ const ChatBot: React.FC = () => {
   const [systemStatus, setSystemStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   
+  const { currentTool, tools } = useTool();
+  const currentToolConfig = tools.find(t => t.id === currentTool);
+
   const toggleSidebar = () => {
     if (isSidebarOpen) {
       closeSidebar();
@@ -72,6 +77,27 @@ const ChatBot: React.FC = () => {
 
   const styles = createStyles({ theme });
 
+  const renderMainContent = () => {
+    if (currentToolConfig?.customComponent) {
+      const CustomComponent = CUSTOM_COMPONENTS[currentToolConfig.customComponent];
+      if (!CustomComponent) {
+        console.error(`Component ${currentToolConfig.customComponent} not found`);
+        return null;
+      }
+      return <CustomComponent />;
+    }
+
+    return (
+      <>
+        <Messages />
+        <View style={styles.bottomContainer}>
+          <Tool />
+          <BottomTabNavigator />
+        </View>
+      </>
+    );
+  };
+
   return (
     <NavigationContainer>
       <ConversationProvider>
@@ -88,11 +114,7 @@ const ChatBot: React.FC = () => {
             </View>
 
             <View style={styles.mainContent}>
-              <Messages />
-              <View style={styles.bottomContainer}>
-                <Tool />
-                <BottomTabNavigator />
-              </View>
+              {renderMainContent()}
             </View>
 
             {isSidebarOpen && (
