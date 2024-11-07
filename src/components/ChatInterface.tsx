@@ -12,11 +12,11 @@ import { LoadingBubble } from './LoadingBubble';
 export const ChatInterface: React.FC = () => {
   const { theme } = useTheme();
   const { currentTool } = useTool();
-  const { currentConversationId, messages } = useConversation();
+  const { currentConversationId, messages, isLoading } = useConversation();
   const styles = createStyles({ theme });
   const tool = TOOLS.find(t => t.id === currentTool);
 
-  if (!currentConversationId || messages.length === 0) {
+  if (!currentConversationId || isLoading) {
     return (
       <View style={styles.mainContent}>
         <LoadingBubble status="Chargement de la conversation..." />

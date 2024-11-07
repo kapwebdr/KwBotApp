@@ -19,6 +19,8 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [systemMessage, setSystemMessage] = useState<string>("Vous êtes un assistant IA utile.");
   const [currentToolId, setCurrentToolId] = useState<ToolType>('llm');
+  const [isLoading, setIsLoading] = useState(false);
+
   const setMessageSave = async (message: Message, toolConfig?: any,conversationId?:string) => {
     let currentId = currentConversationId;
     try {
@@ -86,10 +88,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const loadConversation = async (conversationId: string) => {
     try {
+      setIsLoading(true);
+      setMessages([]);
       const conversation = conversations.find(conv => conv.id === conversationId);
-      console.log(conversationId);
       if (conversation) {
-        // Charger les messages depuis l'API
         const messages = await conversationService.loadConversation(conversationId);
         setCurrentConversationId(conversationId);
         setMessages(messages);
@@ -97,18 +99,17 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     } catch (error) {
       console.error('Erreur lors du chargement de la conversation:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteConversation = async (idOrTempKey: string) => {
     try {
-      // Mettre à jour l'état local avant la suppression API
       const updatedConversations = conversations.filter(conv => 
-        // Vérifier à la fois l'ID et la clé temporaire potentielle
         (conv.id !== idOrTempKey && `temp-${conversations.indexOf(conv)}-${conv.timestamp}` !== idOrTempKey)
       );
       setConversations(updatedConversations);
-      // Si la conversation supprimée était la conversation courante
       if (idOrTempKey === currentConversationId) {
         if (updatedConversations.length > 0) {
           loadConversation(updatedConversations[0].id);
@@ -117,12 +118,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
 
-      // Ne tenter la suppression API que si nous avons un vrai ID
       if (idOrTempKey.startsWith('temp-')) {
-        return; // Sortir sans appeler l'API pour les conversations temporaires
+        return;
       }
 
-      // Tenter de supprimer dans l'API, mais ne pas bloquer si erreur
       try {
         await conversationService.deleteConversation(idOrTempKey);
       } catch (error) {
@@ -173,6 +172,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     saveCurrentConversation,
     setCurrentConversationId,
     loadInitialConversations,
+    isLoading,
   };
 
   return (

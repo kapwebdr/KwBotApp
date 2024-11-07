@@ -8,6 +8,7 @@ import { createStyles } from '../styles/theme.styles';
 interface SidebarProps {
   isOpen: boolean;
   sidebarAnimation: Animated.Value;
+  onClose: () => void;
 }
 
 const MAX_PREVIEW_LENGTH = 50;
@@ -15,6 +16,7 @@ const MAX_PREVIEW_LENGTH = 50;
 export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   sidebarAnimation,
+  onClose,
 }) => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
@@ -25,6 +27,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     loadConversation,
     deleteConversation
   } = useConversation();
+
+  const handleLoadConversation = (id: string) => {
+    onClose();
+    loadConversation(id);
+  };
+
+  const handleNewConversation = () => {
+    onClose();
+    startNewConversation();
+  };
 
   const conversationsWithKeys = React.useMemo(() => {
     return conversations.map((conversation, index) => ({
@@ -61,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           styles.newConversationButton,
           { backgroundColor: theme.colors.primary }
         ]} 
-        onPress={startNewConversation}
+        onPress={handleNewConversation}
       >
         <Text style={[styles.newConversationButtonText, { color: theme.colors.background }]}>
           Nouvelle conversation
@@ -81,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 styles.conversationItem,
                 currentConversationId === item.id && { backgroundColor: theme.colors.gray100 }
               ]}
-              onPress={() => item.id ? loadConversation(item.id) : null}
+              onPress={() => item.id ? handleLoadConversation(item.id) : null}
             >
               <Text style={[styles.conversationTimestamp, { color: theme.colors.text }]}>
                 {new Date(item.timestamp).toLocaleString()}

@@ -109,6 +109,7 @@ const ChatBot: React.FC = () => {
             <Sidebar
               isOpen={isSidebarOpen}
               sidebarAnimation={sidebarAnimation}
+              onClose={closeSidebar}
             />
 
             {!isApiAvailable && (

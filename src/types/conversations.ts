@@ -76,4 +76,5 @@ export interface ConversationContextType {
   saveCurrentConversation: () => void;
   loadInitialConversations: () => Promise<void>;
   setCurrentConversationId: (id: string) => void;
+  isLoading: boolean;
 }
