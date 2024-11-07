@@ -1,4 +1,4 @@
-import { Theme, ThemeType } from './types';
+import { Theme, ThemeType } from './types/themes';
 import { themeStorage } from './services/storage';
 
 export const lightTheme: Theme = {
@@ -38,6 +38,10 @@ export const lightTheme: Theme = {
     codeBackground: '#1E1E1E',
     codeBorder: '#323232',
     codeText: '#D4D4D4',
+    error: '#DC3545',
+    success: '#28A745',
+    warning: '#FFC107',
+    info: '#17A2B8',
   },
   fontSizes: {
     small: 12,
@@ -83,6 +87,10 @@ export const darkTheme: Theme = {
     codeBackground: '#1E1E1E',
     codeBorder: '#323232',
     codeText: '#D4D4D4',
+    error: '#FF4444',
+    success: '#28A745',
+    warning: '#FFC107',
+    info: '#17A2B8',
   },
   fontSizes: {
     small: 12,
@@ -128,6 +136,10 @@ export const dimTheme: Theme = {
     codeBackground: '#1E1E1E',
     codeBorder: '#323232',
     codeText: '#D4D4D4',
+    error: '#FF6B6B',
+    success: '#28A745',
+    warning: '#FFC107',
+    info: '#17A2B8',
   },
   fontSizes: {
     small: 12,
@@ -173,6 +185,10 @@ export const oceanTheme: Theme = {
     codeBackground: '#1E1E1E',
     codeBorder: '#323232',
     codeText: '#D4D4D4',
+    error: '#FF8080',
+    success: '#28A745',
+    warning: '#FFC107',
+    info: '#17A2B8',
   },
   fontSizes: {
     small: 12,
@@ -218,6 +234,10 @@ export const forestTheme: Theme = {
     codeBackground: '#1E1E1E',
     codeBorder: '#323232',
     codeText: '#D4D4D4',
+    error: '#E85D5D',
+    success: '#28A745',
+    warning: '#FFC107',
+    info: '#17A2B8',
   },
   fontSizes: {
     small: 12,

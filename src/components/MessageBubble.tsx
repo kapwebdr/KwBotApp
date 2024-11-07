@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Pressable, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Message } from '../types';
+import { Message } from '../types/conversations';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
 import * as FileSystem from 'expo-file-system';
@@ -158,6 +158,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </audio>
       );
     } else {
+      if (typeof message.content !== 'string') {
+        return null;
+      }
       return renderTextWithCodeBlocks(
         message.content,
         [

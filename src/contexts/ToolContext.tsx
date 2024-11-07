@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useMemo } from 'react';
-import { ToolType, ToolConfig, Message, TOOLS, ToolContextType, ToolState } from '../types';
+import { ToolType, ToolConfig, TOOLS, ToolContextType, ToolState } from '../types/tools';
+import { ActionType } from '../types/api';
 import { useConversation } from './ConversationContext';
 import { apiHandler } from '../services/apiHandler';
 import { useLoading } from '../hooks/useLoading';
@@ -7,20 +8,27 @@ import { useLoading } from '../hooks/useLoading';
 export const ToolContext = createContext<ToolContextType | null>(null);
 
 export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  
+
   const [currentTool, setCurrentTool] = useState<ToolType>('llm');
   const [toolStates, setToolStates] = useState<Record<ToolType, ToolState>>({} as Record<ToolType, ToolState>);
- 
+
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  //const [input, setInput] = useState('');
   const loading = useLoading();
   const [availableOptions, setAvailableOptions] = useState<Record<string, string[]>>({});
-  const { messages, setMessages } = useConversation();
+  const { messages, setMessages, setMessageSave, setCurrentToolId, setCurrentConversationId } = useConversation();
+
+  // Mettre à jour le currentTool dans ConversationContext quand il change
+  useEffect(() => {
+    if (setCurrentToolId) {
+      setCurrentToolId(currentTool);
+    }
+  }, [currentTool, setCurrentToolId]);
+
   const initialToolConfig = useMemo(() => {
     const tool = TOOLS.find(t => t.id === currentTool);
-    if (!tool?.configFields) return {};
-    
+    if (!tool?.configFields) {return {};}
+
     const newConfig =  tool.configFields.reduce((config, field) => {
       config[field.name] = field.defaultValue || '';
       return config;
@@ -31,27 +39,27 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       [currentTool]: {
         ...prev[currentTool],
         config: newConfig
-      }
+      },
     }));
-    
+
   }, [currentTool]);
-  
+
   const updateToolConfig = (config: Partial<ToolConfig>) => {
-    const newConfig = { ...toolStates[currentTool]?.config, ...config }; 
+    const newConfig = { ...toolStates[currentTool]?.config, ...config };
     setToolStates(prev => ({
       ...prev,
       [currentTool]: {
         ...prev[currentTool],
-        config: newConfig
-      }
+        config: newConfig,
+      },
     }));
   };
 
   useEffect(() => {
     const initializeToolOptions = async () => {
         const tool = TOOLS.find(t => t.id === currentTool);
-        if (!tool || !tool.configFields) return;
-        const newOptions = { ...availableOptions }; 
+        if (!tool || !tool.configFields) {return;}
+        const newOptions = { ...availableOptions };
         for (const field of tool.configFields) {
           if (field.initAction && !availableOptions[field.name]) {
             const action = field.initAction;
@@ -78,8 +86,8 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       [currentTool]: {
         ...prev[currentTool],
-        input
-      }
+        input,
+      },
     }));
   };
   const addPendingFile = (file: { name: string; file: File }) => {
@@ -87,8 +95,8 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       [currentTool]: {
         ...prev[currentTool],
-        pendingFiles: [...(prev[currentTool]?.pendingFiles || []), file]
-      }
+        pendingFiles: [...(prev[currentTool]?.pendingFiles || []), file],
+      },
     }));
   };
 
@@ -97,39 +105,33 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       [currentTool]: {
         ...prev[currentTool],
-        pendingFiles: []
-      }
+        pendingFiles: [],
+      },
     }));
   };
   const handleToolAction = async (actionType: ActionType, ...args: any[]) => {
     const tool = TOOLS.find(t => t.id === currentTool);
-    if (!tool) return;
+    if (!tool) {return;}
 
     const toolAction = tool.actions?.find(a => a.type === actionType);
-    if (!toolAction) return;
-
-    // Si l'outil n'utilise pas le système de messages, exécuter simplement l'action
-    if (!tool.useMessagesSystem) {
-      try {
-        const result = await apiHandler.executeApiAction(
-          currentTool,
-          actionType,
-          args[0],
-          loading.updateProgress
-        );
-        return result;
-      } catch (error) {
-        console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
-        throw error;
-      }
-    }
+    if (!toolAction) {return;}
 
     const missingFields = tool.configFields
     ?.filter(field => field.required && !toolStates[currentTool]?.config[field.name])
     .map(field => field.name);
 
     if (missingFields && missingFields.length > 0) {
-      console.error(`Les champs requis suivants sont manquants : ${missingFields.join(', ')}`);
+      // Mettre à jour l'état des erreurs
+      setToolStates(prev => ({
+        ...prev,
+        [currentTool]: {
+          ...prev[currentTool],
+          errors: missingFields.reduce((acc, fieldName) => ({
+            ...acc,
+            [fieldName]: 'Ce champ est requis',
+          }), {}),
+        },
+      }));
       return;
     }
     // Validation des prérequis
@@ -141,23 +143,37 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       setIsGenerating(true);
-      loading.startLoading(toolAction.generatingTxt,toolAction.generatingProgress);
-      const userContent =  tool.userBubbleContent ? 
-        await tool.userBubbleContent(toolStates[currentTool]) :
-        input;
-      const newMessages = [
-        ...messages,
-        { role: 'human', content: userContent } as Message,
-        { role: 'assistant', content: '...' } as Message
-      ];
-      setMessages(newMessages.slice(0, -1));
-      setInput('');
+      loading.startLoading(toolAction.generatingTxt, toolAction.generatingProgress);
 
+      const userContent = tool.userBubbleContent ?
+        await tool.userBubbleContent(toolStates[currentTool]) :
+        toolStates[currentTool]?.input;
+
+      // Créer le message utilisateur
+      const userMessage = { role: 'human', content: userContent };
+
+      // Mettre à jour l'affichage avec le message utilisateur
+      const newMessages = [...messages, userMessage];
+      setMessages(newMessages);
+
+      // Sauvegarder le message utilisateur
+      const newConversationId = await setMessageSave(userMessage, toolStates[currentTool]?.config);
+      setCurrentConversationId(newConversationId); // Ajouter cette ligne
+
+      setInput('');
+      setToolStates(prev => ({
+        ...prev,
+        [currentTool]: {
+          ...prev[currentTool],
+          errors: {},
+        },
+      }));
       const params = {
         ...toolStates[currentTool]?.config,
-        input,
-        messages: newMessages.slice(0, -1),
-        ...args[0]
+        input: toolStates[currentTool]?.input,
+        messages: newMessages,
+        conversationId: newConversationId,
+        ...args[0],
       };
 
       if (toolAction.api.streaming) {
@@ -168,21 +184,22 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
           params,
           loading.updateProgress,
           (chunk) => {
-            if (chunk !== null){
+            if (chunk !== null) {
               streamContent += chunk;
-              loading.stopLoading();
               setMessages([
-                ...newMessages.slice(0, -1),
-                { role: 'assistant', content: streamContent } as Message
+                ...newMessages,
+                { role: 'assistant', content: streamContent }
               ]);
             }
           },
-          (response) => {
-            loading.stopLoading();
-            setMessages([
-              ...newMessages.slice(0, -1),
-              { role: 'assistant', content: response } as Message
-            ]);
+          async (response,params) => {
+            setCurrentConversationId(params['conversationId']); // Ajouter cette ligne
+            if (response !== null) {
+              loading.stopLoading();
+              const assistantMessage = { role: 'assistant', content: response };
+              setMessages([...newMessages, assistantMessage]);
+              await setMessageSave(assistantMessage, toolStates[currentTool]?.config,params['conversationId']);
+            }
           }
         );
       } else {
@@ -193,10 +210,10 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
           loading.updateProgress
         );
 
-        setMessages([
-          ...newMessages.slice(0, -1),
-          { role: 'assistant', content: result } as Message
-        ]);
+        const assistantMessage = { role: 'assistant', content: result };
+        
+        setMessages([...newMessages, assistantMessage]);
+        setMessageSave(assistantMessage, toolStates[currentTool]?.config);
       }
     } catch (error) {
       console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
@@ -259,6 +276,81 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [toolHeight, setToolHeight] = useState(0);
 
+  const executeToolAction = async (actionType: ActionType, params: any = {}) => {
+    const tool = TOOLS.find(t => t.id === currentTool);
+    if (!tool) return;
+
+    const toolAction = tool.actions?.find(a => a.type === actionType);
+    if (!toolAction) return;
+
+    // Validation des champs requis
+    const missingFields = tool.configFields
+      ?.filter(field => field.required && !toolStates[currentTool]?.config[field.name])
+      .map(field => field.name);
+
+    if (missingFields && missingFields.length > 0) {
+      // Mettre à jour l'état des erreurs
+      setToolStates(prev => ({
+        ...prev,
+        [currentTool]: {
+          ...prev[currentTool],
+          errors: missingFields.reduce((acc, fieldName) => ({
+            ...acc,
+            [fieldName]: 'Ce champ est requis'
+          }), {})
+        }
+      }));
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      if (toolAction.generatingTxt) {
+        loading.startLoading(toolAction.generatingTxt, toolAction.generatingProgress);
+      }
+
+      const actionParams = {
+        ...toolStates[currentTool]?.config,
+        ...params
+      };
+      setToolStates(prev => ({
+        ...prev,
+        [currentTool]: {
+          ...prev[currentTool],
+          errors: {}
+        }
+      }));
+      if (toolAction.api.streaming) {
+        let streamContent = '';
+        const result = await apiHandler.executeApiAction(
+          currentTool,
+          actionType,
+          actionParams,
+          loading.updateProgress,
+          (chunk) => {
+            if (chunk !== null) {
+              streamContent += chunk;
+            }
+          }
+        );
+        return result || streamContent;
+      } else {
+        return await apiHandler.executeApiAction(
+          currentTool,
+          actionType,
+          actionParams,
+          loading.updateProgress
+        );
+      }
+    } catch (error) {
+      console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
+      throw error;
+    } finally {
+      setIsGenerating(false);
+      loading.stopLoading();
+    }
+  };
+
   const value = {
     currentTool,
     setCurrentTool,
@@ -275,6 +367,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearPendingFiles,
     toolHeight,
     setToolHeight,
+    executeToolAction,
   };
 
   return (

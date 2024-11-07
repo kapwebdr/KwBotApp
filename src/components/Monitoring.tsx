@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import { SystemStats, Container } from '../types';
+import { SystemMetrics, Container } from '../types/systemMetrics';
 import { apiHandler } from '../services/apiHandler';
 
 export const Monitoring: React.FC = () => {
   const { theme } = useTheme();
-  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const [systemStats, setSystemStats] = useState<SystemMetrics | null>(null);
   const [containers, setContainers] = useState<Container[]>([]);
   const [showContainers, setShowContainers] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export const Monitoring: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000);
+    const interval = setInterval(fetchData, 1200000);
     return () => clearInterval(interval);
   }, []);
 
@@ -38,7 +38,7 @@ export const Monitoring: React.FC = () => {
     try {
       await apiHandler.executeApiAction('monitoring', 'execute', {
         containerId,
-        action
+        action,
       }, 'handleContainerAction');
       fetchData();
     } catch (err) {
@@ -72,7 +72,7 @@ export const Monitoring: React.FC = () => {
         />
         {systemStats && (
           <Text style={[styles.statsText, { color: theme.colors.text }]}>
-            CPU: {systemStats && systemStats.cpu_percent ? systemStats.cpu_percent.toFixed(1) : '0'}% | 
+            CPU: {systemStats && systemStats.cpu.percent ? systemStats.cpu.percent.toFixed(1) : '0'}% | 
             RAM: {systemStats && systemStats.memory && systemStats.memory.percent ? systemStats.memory.percent.toFixed(1) : '0'}% | 
             Disk: {systemStats && systemStats.disk && systemStats.disk.percent ? systemStats.disk.percent.toFixed(1) : '0'}%
           </Text>
@@ -87,7 +87,7 @@ export const Monitoring: React.FC = () => {
       {/* Liste des conteneurs */}
       {showContainers && (
         <View style={[styles.containersDropdown, { backgroundColor: theme.colors.gray100 }]}>
-          {containers.map((container) => (
+          {containers && containers.map((container) => (
             <View key={container.id} style={styles.containerItem}>
               <View style={styles.containerHeader}>
                 <View style={styles.containerInfo}>

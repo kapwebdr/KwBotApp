@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { Tool, ToolConfig  } from '../types';
+import { Tool, ToolConfig  } from '../types/tools';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles, getSelectStyle } from '../styles/theme.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
 import FileUploadConfig from './FileUploadConfig';
 import { useLoading } from '../hooks/useLoading';
 import AudioRecorder from './AudioRecorder';
+import { useConversation } from '../contexts/ConversationContext';
 
 interface ToolConfigComponentProps {
   tool: Tool;
@@ -39,6 +40,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const currentState = toolStates[currentTool];
   const pendingFiles = currentState?.pendingFiles || [];
   const input = currentState?.input || '';
+  const { currentConversationId } = useConversation();
   const handleConfigChange = (name: string, value: any) => {
     onConfigChange({
       ...config,
@@ -51,6 +53,10 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const hasUrlInput = !!tool.features?.urlInput;
 
   const handleSend = async () => {
+    if (!currentConversationId) {
+      return; // Désactive l'envoi si aucune conversation n'est chargée
+    }
+
     if (pendingFiles && pendingFiles.length > 0) {
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -73,56 +79,82 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   };
 
   const renderField = (field: any) => {
+    const hasError = toolStates[currentTool]?.errors?.[field.name];
+    const fieldStyle = [
+      styles.configField,
+      hasError && styles.configFieldError
+    ];
+
     switch (field.type) {
       case 'text':
         return (
-          <TextInput
-            style={styles.textInput}
-            value={config[field.name] || (field.defaultValue || '')}
-            onChangeText={(value) => handleConfigChange(field.name, value)}
-            placeholder={field.placeholder || field.label}
-            placeholderTextColor={theme.colors.text}
-          />
+          <View style={fieldStyle}>
+            <Text style={[
+              styles.configLabel,
+              hasError && styles.configLabelError
+            ]}>
+              {field.label}
+              {field.required && <Text style={styles.requiredStar}>*</Text>}
+            </Text>
+            <TextInput
+              style={[
+                styles.textInput,
+                hasError && styles.textInputError
+              ]}
+              value={config[field.name] || (field.defaultValue || '')}
+              onChangeText={(value) => handleConfigChange(field.name, value)}
+              placeholder={field.placeholder || field.label}
+              placeholderTextColor={hasError ? theme.colors.error : theme.colors.text}
+            />
+            {hasError && (
+              <Text style={styles.errorText}>{toolStates[currentTool].errors[field.name]}</Text>
+            )}
+          </View>
         );
 
       case 'select':
         const selectConfig = selectConfigs[field.name];
         if (selectConfig) {
           return (
-            <View style={styles.selectContainer}>
-              <select
-                value={selectConfig.value}
-                onChange={(e) => {
-                  selectConfig.onChange(e.target.value);
-                }}
-                style={getSelectStyle({ theme }, selectConfig.isLoading)}
-                disabled={selectConfig.isLoading || loading.isLoading}
-              >
-                <option value="">Sélectionnez un modèle</option>
-                {Array.isArray(selectConfig.options) && selectConfig.options.map((option: string | { value: string; label: string }) => {
-                  if (typeof option === 'string') {
-                    return (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    );
-                  } else {
-                    return (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    );
-                  }
-                })}
-              </select>
-              <Ionicons 
-                name={loading.isLoading ? "reload" : "chevron-down"} 
-                size={16} 
-                color={theme.colors.text}
-                style={[
-                  styles.selectIcon
-                ]}
-              />
+            <View style={fieldStyle}>
+              <Text style={[
+                styles.configLabel,
+                hasError && styles.configLabelError
+              ]}>
+                {field.label}
+                {field.required && <Text style={styles.requiredStar}>*</Text>}
+              </Text>
+              <View style={[
+                styles.selectContainer,
+                hasError && styles.selectContainerError
+              ]}>
+                <select
+                  value={selectConfig.value}
+                  onChange={(e) => selectConfig.onChange(e.target.value)}
+                  style={getSelectStyle({ theme }, selectConfig.isLoading, hasError)}
+                  disabled={selectConfig.isLoading || loading.isLoading}
+                >
+                  <option value="">Sélectionnez un modèle</option>
+                  {Array.isArray(selectConfig.options) && selectConfig.options.map((option: string | { value: string; label: string }) => {
+                    if (typeof option === 'string') {
+                      return (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      );
+                    } else {
+                      return (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      );
+                    }
+                  })}
+                </select>
+              </View>
+              {hasError && (
+                <Text style={styles.errorText}>{toolStates[currentTool].errors[field.name]}</Text>
+              )}
             </View>
           );
         }
@@ -180,9 +212,6 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
       <View key={index} style={styles.configRow}>
         {pair.map((field) => (
           <View key={field.name} style={styles.configColumn}>
-            <Text style={[styles.configLabel, { color: theme.colors.text }]}>
-              {field.label}
-            </Text>
             {renderField(field)}
           </View>
         ))}
@@ -328,15 +357,15 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
             <TouchableOpacity 
               style={[
                 styles.sendButton,
-                isGenerating ? styles.stopButton : (!input.trim() && !pendingFiles) && styles.sendButtonDisabled
+                isGenerating ? styles.stopButton : (!input.trim() && !pendingFiles || !currentConversationId) && styles.sendButtonDisabled
               ]}
               onPress={isGenerating ? handleStop : handleSend}
-              disabled={!isGenerating && (!input.trim() && !pendingFiles)}
+              disabled={!isGenerating && (!input.trim() && !pendingFiles || !currentConversationId)}
             >
               <Ionicons 
                 name={isGenerating ? "stop" : "send"}
                 size={styles.buttonIcon.size}
-                color={isGenerating ? "red" : (!input.trim() && !pendingFiles) ? theme.colors.gray400 : theme.colors.primary}
+                color={isGenerating ? "red" : (!input.trim() && !pendingFiles || !currentConversationId) ? theme.colors.gray400 : theme.colors.primary}
               />
             </TouchableOpacity>
           </View>

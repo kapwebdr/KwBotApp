@@ -35,6 +35,7 @@
           }
         }
       }
-    }
+    },
+    "entryPoint": "./src/App.tsx"
   }
 }

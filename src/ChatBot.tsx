@@ -3,18 +3,18 @@ import { View, TouchableOpacity, Animated, TouchableWithoutFeedback } from 'reac
 import { NavigationContainer } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorModal from './components/ErrorModal';
-import Messages from './components/Messages';
-import { Tool } from './components/Tool';
 import { createStyles } from './styles/theme.styles';
 import { Sidebar } from './components/Sidebar';
-import { ConversationProvider } from './contexts/ConversationContext';
 import { ToolProvider } from './contexts/ToolContext';
 import { useTheme } from './contexts/ThemeContext';
-import { BottomTabNavigator } from './navigation/BottomTabNavigator';
 import { Monitoring } from './components/Monitoring';
 import { ThemeSelector } from './components/ThemeSelector';
-import { useTool } from './hooks/useTool';
-import { CUSTOM_COMPONENTS } from './types';
+import { ChatInterface } from './components/ChatInterface';
+import { BottomTabNavigator } from './navigation/BottomTabNavigator';
+import { Tool } from './components/Tool';
+import { useNotification } from './hooks/useNotification';
+import { notificationService } from './services/notificationService';
+import { useConversation } from './contexts/ConversationContext';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -23,12 +23,16 @@ const ChatBot: React.FC = () => {
   const sidebarAnimation = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const [isApiAvailable, setIsApiAvailable] = useState(true);
   const [apiErrorMessage, setApiErrorMessage] = useState('');
-  const { theme, toggleTheme, isDark } = useTheme();
-  const [systemStatus, setSystemStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
-  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
-  
-  const { currentTool, tools } = useTool();
-  const currentToolConfig = tools.find(t => t.id === currentTool);
+  const { theme } = useTheme();
+  const { addNotification } = useNotification();
+  const { loadInitialConversations } = useConversation();
+
+  useEffect(() => {
+    loadInitialConversations();
+    notificationService.init((type, message, isPermanent) => 
+      addNotification(type, message, isPermanent)
+    );
+  }, []);
 
   const toggleSidebar = () => {
     if (isSidebarOpen) {
@@ -77,31 +81,8 @@ const ChatBot: React.FC = () => {
 
   const styles = createStyles({ theme });
 
-  const renderMainContent = () => {
-    if (currentToolConfig?.customComponent) {
-      const CustomComponent = CUSTOM_COMPONENTS[currentToolConfig.customComponent];
-      if (!CustomComponent) {
-        console.error(`Component ${currentToolConfig.customComponent} not found`);
-        return null;
-      }
-      return <CustomComponent />;
-    }
-
-    return (
-      <>
-        <Messages />
-        <View style={styles.bottomContainer}>
-          <Tool />
-          <BottomTabNavigator />
-        </View>
-      </>
-    );
-  };
-
   return (
     <NavigationContainer>
-      <ConversationProvider>
-        <ToolProvider>
           <View style={styles.container}>
             <View style={styles.header}>
               <TouchableOpacity onPress={toggleSidebar}>
@@ -113,10 +94,12 @@ const ChatBot: React.FC = () => {
               <ThemeSelector />
             </View>
 
-            <View style={styles.mainContent}>
-              {renderMainContent()}
+            <ChatInterface />
+            <View style={styles.bottomContainer}>
+              <Tool />
+              <BottomTabNavigator />
             </View>
-
+            
             {isSidebarOpen && (
               <TouchableWithoutFeedback onPress={closeSidebar}>
                 <View style={styles.sidebarOverlay} />
@@ -136,8 +119,6 @@ const ChatBot: React.FC = () => {
               />
             )}
           </View>
-        </ToolProvider>
-      </ConversationProvider>
     </NavigationContainer>
   );
 };

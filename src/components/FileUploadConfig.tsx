@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
-import { Tool } from '../types';
+import { Tool } from '../types/tools';
 import { PendingFile } from './PendingFile';
 import { useTool } from '../hooks/useTool';
 interface FileUploadConfigProps {

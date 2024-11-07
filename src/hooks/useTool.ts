@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { ToolContext } from '../contexts/ToolContext';
-import { TOOLS } from '../types';
+import { TOOLS } from '../types/tools';
 
 export const useTool = () => {
   const context = useContext(ToolContext);

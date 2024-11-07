@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Theme } from '../types';
+import { Theme } from '../types/themes';
 import { lightTheme } from '../theme';
 
 export const createStyles = (themeContext: { theme: Theme }) => {
@@ -656,6 +656,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       padding: 4,
       borderRadius: 4,
       backgroundColor: theme.colors.gray100,
+      zIndex: 900,
     },
     statusIcon: {
       marginRight: 4,
@@ -1068,6 +1069,115 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       fontSize: 12,
       opacity: 0.7,
       marginTop: 2,
+    },
+    // Styles pour les champs en erreur
+    configFieldError: {
+      borderColor: theme.colors.error,
+    },
+
+    configLabelError: {
+      color: theme.colors.error,
+    },
+
+    textInputError: {
+      borderWidth: 1,
+      borderColor: theme.colors.error,
+      backgroundColor: `${theme.colors.error}10`,
+    },
+
+    selectContainerError: {
+      borderWidth: 1,
+      borderColor: theme.colors.error,
+      backgroundColor: `${theme.colors.error}10`,
+    },
+
+    errorText: {
+      color: theme.colors.error,
+      fontSize: 12,
+      marginTop: 4,
+    },
+
+    requiredStar: {
+      color: theme.colors.error,
+      marginLeft: 4,
+    },
+
+    notificationContainer: {
+      position: 'absolute',
+      top: 0,
+      left: '50%',
+      transform: [{ translateX: '-50%' }],
+      zIndex: 1000,
+      maxWidth: 600,
+      width: '90%',
+      paddingTop: 10,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    },
+
+    notification: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 12,
+      borderRadius: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      maxHeight: 60,
+    },
+
+    notificationContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+    },
+
+    notificationText: {
+      fontSize: theme.fontSizes.medium,
+      color: theme.colors.text,
+      flex: 1,
+    },
+
+    notificationClose: {
+      padding: 8,
+      borderRadius: 4,
+      marginLeft: 8,
+      opacity: 0.7,
+      cursor: 'pointer',
+      ':hover': {
+        opacity: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+      },
+    },
+
+    // Styles spécifiques par type
+    notificationsuccess: {
+      backgroundColor: `${theme.colors.success}40`,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.success,
+    },
+
+    notificationerror: {
+      backgroundColor: `${theme.colors.error}40`,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.error,
+    },
+
+    notificationwarning: {
+      backgroundColor: `${theme.colors.warning}40`,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.warning,
+    },
+
+    notificationinfo: {
+      backgroundColor: `${theme.colors.info}40`,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.info,
     },
   });
 };

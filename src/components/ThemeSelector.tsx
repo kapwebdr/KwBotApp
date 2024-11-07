@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, TouchableWithoutFeedback } from 'react-na
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
-import { ThemeType, THEME_OPTIONS } from '../types';
+import { ThemeType, THEME_OPTIONS } from '../types/themes';
 
 export const ThemeSelector: React.FC = () => {
   const { theme, currentTheme, setTheme } = useTheme();

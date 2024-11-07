@@ -1,6 +1,11 @@
-import FileManager from './components/FileManager';
-
-export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files';
+import { ActionType, ApiEndpoint } from './api';
+import { useLoading } from '../hooks/useLoading';
+interface TTSConfig {
+  enabled: boolean;
+  voice_path: string;
+  language: string;
+}
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files' | 'monitoring' | 'audio_chat';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -25,6 +30,7 @@ export interface ToolFeatures {
     multiple?: boolean;
     base64Input?: boolean;
     base64Output?: boolean;
+    dragDrop?: boolean;
   };
   urlInput?: boolean;
 }
@@ -35,8 +41,8 @@ export interface ToolConfigField {
   type: 'text' | 'select' | 'number' | 'micro';
   placeholder?: string;
   loading?: boolean;
-  defaultValue?: string | number;
-  options?: string[] | { value: string; label: string }[];
+  defaultValue?: string | number | string[];
+  options?: string[] | { value: string; label: string; }[];
   min?: number;
   max?: number;
   step?: number;
@@ -46,7 +52,7 @@ export interface ToolConfigField {
   };
   onSelect?: {
     action: ActionType;
-    paramName: string;
+    paramName?: string;
     replaceInPath?: string;
   };
 }
@@ -70,20 +76,7 @@ export interface ToolState {
   config: ToolConfig;
   availableOptions?: string[];
   input?: string;
-  pendingFiles?: Array<{ name: string; file: File }>;
-}
-export type ActionType = 'init' | 'load' | 'execute' | 'stop' | 'send' | 'upload' | 'url';
-
-export interface ApiEndpoint {
-  path: string;
-  method?: 'GET' | 'POST';
-  streaming?: boolean;
-  responseType?: 'json' | 'stream' | 'base64';
-  requestTransform?: (params: any) => any;
-  responseTransform?: (response: any) => any;
-  streamProcessor?: (chunk: any) => string;
-  headers?: Record<string, string>;
-  loadingTxt?: string;
+  pendingFiles?: Array<{ name: string; file: File; }>;
 }
 
 export interface ToolAction {
@@ -95,6 +88,7 @@ export interface ToolAction {
   generatingTxt?: string;
   generatingProgress?: number;
   errorMessages?: {
+    noFile?: string;
     noInput?: string;
     noModel?: string;
     modelNotLoaded?: string;
@@ -131,7 +125,7 @@ export const TOOLS: Tool[] = [
       promptInput: {
         placeholder: 'Tapez votre message...',
         multiline: true,
-      }
+      },
     },
     configFields: [
       {
@@ -147,15 +141,15 @@ export const TOOLS: Tool[] = [
         onSelect: {
           action: 'load',
           paramName: 'modelId',
-          replaceInPath: '{modelId}'
-        }
+          replaceInPath: '{modelId}',
+        },
       },
       {
         name: 'system',
         type: 'text',
         label: 'Message système',
         defaultValue: 'Tu es un assistant utile et amical.',
-        placeholder: 'Entrez le message système...'
+        placeholder: 'Entrez le message système...',
       },
     ],
     actions: [
@@ -168,7 +162,7 @@ export const TOOLS: Tool[] = [
           noModel: 'Veuillez sélectionner un modèle',
           modelNotLoaded: 'Le modèle est en cours de chargement',
           generating: 'Une génération est déjà en cours',
-          apiError: 'Erreur lors de l\'appel à l\'API'
+          apiError: 'Erreur lors de l\'appel à l\'API',
         },
         api: {
           path: '/ai/generate',
@@ -181,15 +175,16 @@ export const TOOLS: Tool[] = [
               prompt: params.input,
               stream: true,
               messages: params.messages,
-              format_type: "encoded"
+              format_type: 'encoded',
           }),
           streamProcessor: (chunk: any) => {
             if (chunk.text) {
               return chunk.text;
             }
-          }
-        }
-      }
+          },
+          responseTransform: (response) => response.text,
+        },
+      },
     ],
     api: {
       init: {
@@ -198,7 +193,7 @@ export const TOOLS: Tool[] = [
         responseType: 'json',
         requestTransform: () => ({
         }),
-        responseTransform: (response) => response.models
+        responseTransform: (response) => response.models,
       },
       load: {
         path: '/ai/load_model',
@@ -207,10 +202,10 @@ export const TOOLS: Tool[] = [
         responseType: 'stream',
         loadingTxt: 'Chargement du modèle en cours...',
         requestTransform: (params) => ({
-            model_name: params.modelId
+            model_name: params.modelId,
         }),
-      }
-    }
+      },
+    },
   },
   {
     id: 'image_generation',
@@ -219,8 +214,8 @@ export const TOOLS: Tool[] = [
     features: {
       promptInput: {
         placeholder: 'Entrez un prompt...',
-        multiline: true
-      }
+        multiline: true,
+      },
     },
     configFields: [
       {
@@ -236,8 +231,8 @@ export const TOOLS: Tool[] = [
         onSelect: {
           action: 'load',
           paramName: 'modelId',
-          replaceInPath: '{modelId}'
-        }
+          replaceInPath: '{modelId}',
+        },
       },
       {
         name: 'width',
@@ -246,7 +241,7 @@ export const TOOLS: Tool[] = [
         defaultValue: 256,
         min: 256,
         max: 1024,
-        step: 64
+        step: 64,
       },
       {
         name: 'height',
@@ -255,7 +250,7 @@ export const TOOLS: Tool[] = [
         defaultValue: 256,
         min: 256,
         max: 1024,
-        step: 64
+        step: 64,
       },
       {
         name: 'steps',
@@ -264,7 +259,7 @@ export const TOOLS: Tool[] = [
         defaultValue: 20,
         min: 1,
         max: 100,
-        step: 1
+        step: 1,
       },
       {
         name: 'strength',
@@ -273,8 +268,8 @@ export const TOOLS: Tool[] = [
         defaultValue: 0.8,
         min: 0,
         max: 1,
-        step: 0.1
-      }
+        step: 0.1,
+      },
     ],
     actions: [
       {
@@ -288,9 +283,8 @@ export const TOOLS: Tool[] = [
           noModel: 'Veuillez sélectionner un modèle',
           modelNotLoaded: 'Le modèle est en cours de chargement',
           generating: 'Une génération est déjà en cours',
-          apiError: 'Erreur lors de la génération de l\'image'
+          apiError: 'Erreur lors de la génération de l\'image',
         },
-        
         api: {
           path: '/ai/image/generate',
           method: 'POST',
@@ -303,13 +297,13 @@ export const TOOLS: Tool[] = [
               width: params.width,
               height: params.height,
               steps: params.steps,
-              strength: params.strength
+              strength: params.strength,
           }),
           responseTransform: (response) => {
             return `data:image/png;base64,${response.image}`;
-          }
-        }
-      }
+          },
+        },
+      },
     ],
     api: {
       init: {
@@ -320,7 +314,7 @@ export const TOOLS: Tool[] = [
         }),
         responseTransform: (response) => {
           return Object.keys(response.models);
-        }
+        },
       },
       load: {
         path: '/ai/image/load_model',
@@ -329,10 +323,10 @@ export const TOOLS: Tool[] = [
         responseType: 'stream',
         loadingTxt: 'Chargement du modèle en cours...',
         requestTransform: (params) => ({
-          model_type: params.modelId
+          model_type: params.modelId,
         }),
-      }
-    }
+      },
+    },
   },
   {
     id: 'image_analysis',
@@ -342,8 +336,8 @@ export const TOOLS: Tool[] = [
       fileUpload: {
         accept: ['image/*'],
         multiple: false,
-        base64Input: true
-      }
+        base64Input: true,
+      },
     },
     configFields: [
       {
@@ -351,8 +345,8 @@ export const TOOLS: Tool[] = [
         type: 'select',
         label: 'Labels à détecter',
         defaultValue: ['chat', 'chien', 'oiseau', 'personne', 'voiture'],
-        options: ['chat', 'chien', 'oiseau', 'personne', 'voiture', 'vélo', 'arbre', 'maison']
-      }
+        options: ['chat', 'chien', 'oiseau', 'personne', 'voiture', 'vélo', 'arbre', 'maison'],
+      },
     ],
     actions: [
       {
@@ -360,7 +354,7 @@ export const TOOLS: Tool[] = [
         handler: 'handleImageAnalysis',
         errorMessages: {
           noFile: 'Veuillez sélectionner une image',
-          apiError: 'Erreur lors de l\'analyse de l\'image'
+          apiError: 'Erreur lors de l\'analyse de l\'image',
         },
         api: {
           path: '/ai/image/analyze',
@@ -368,11 +362,11 @@ export const TOOLS: Tool[] = [
           responseType: 'json',
           requestTransform: (params) => ({
             image: params.base64,
-            labels: params.labels
-          })
-        }
-      }
-    ]
+            labels: params.labels,
+          }),
+        },
+      },
+    ],
   },
   {
     id: 'ocr',
@@ -382,8 +376,8 @@ export const TOOLS: Tool[] = [
       fileUpload: {
         accept: ['image/*'],
         multiple: false,
-        base64Input: true
-      }
+        base64Input: true,
+      },
     },
     userBubbleContent: async (toolState: ToolState) => {
       const pendingFiles = toolState.pendingFiles || [];
@@ -395,7 +389,6 @@ export const TOOLS: Tool[] = [
               reader.onerror = (error) => reject(error);
               reader.readAsDataURL(file);
           });
-          
           return base64Image;
       } else {
           return 'Image';
@@ -407,19 +400,19 @@ export const TOOLS: Tool[] = [
         handler: 'handleOCR',
         errorMessages: {
           noFile: 'Veuillez sélectionner une image',
-          apiError: 'Erreur lors de l\'extraction du texte'
+          apiError: 'Erreur lors de l\'extraction du texte',
         },
         api: {
           path: '/ai/image/ocr',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
-              image: params.base64
+              image: params.base64,
           }),
-          responseTransform: (response) => response.text
-        }
-      }
-    ]
+          responseTransform: (response) => response.text,
+        },
+      },
+    ],
   },
   {
     id: 'image_refine',
@@ -428,14 +421,14 @@ export const TOOLS: Tool[] = [
     features: {
       promptInput: {
         placeholder: 'Instructions de modification...',
-        multiline: true
+        multiline: true,
       },
       fileUpload: {
         accept: ['image/*'],
         multiple: false,
         base64Input: true,
-        base64Output: true
-      }
+        base64Output: true,
+      },
     },
     configFields: [
       {
@@ -444,8 +437,8 @@ export const TOOLS: Tool[] = [
         label: 'Modèle',
         defaultValue: 'sdxl/refiner',
         options: [
-          { value: 'sdxl/refiner', label: 'SDXL Refiner' }
-        ]
+          { value: 'sdxl/refiner', label: 'SDXL Refiner' },
+        ],
       },
       {
         name: 'strength',
@@ -454,7 +447,7 @@ export const TOOLS: Tool[] = [
         defaultValue: 0.3,
         min: 0,
         max: 1,
-        step: 0.1
+        step: 0.1,
       },
       {
         name: 'steps',
@@ -463,8 +456,8 @@ export const TOOLS: Tool[] = [
         defaultValue: 20,
         min: 1,
         max: 100,
-        step: 1
-      }
+        step: 1,
+      },
     ],
     actions: [
       {
@@ -474,7 +467,7 @@ export const TOOLS: Tool[] = [
         errorMessages: {
           noFile: 'Veuillez sélectionner une image',
           noInput: 'Veuillez décrire les modifications souhaitées',
-          apiError: 'Erreur lors de l\'amélioration de l\'image'
+          apiError: 'Erreur lors de l\'amélioration de l\'image',
         },
         api: {
           path: '/ai/image/refine',
@@ -485,11 +478,11 @@ export const TOOLS: Tool[] = [
             image: params.base64,
             prompt: params.input,
             strength: params.strength || 0.3,
-            steps: params.steps || 20
-          })
-        }
-      }
-    ]
+            steps: params.steps || 20,
+          }),
+        },
+      },
+    ],
   },
   {
     id: 'translation',
@@ -498,8 +491,8 @@ export const TOOLS: Tool[] = [
     features: {
       promptInput: {
         placeholder: 'Entrez le texte à traduire...',
-        multiline: true
-      }
+        multiline: true,
+      },
     },
     configFields: [
       {
@@ -511,8 +504,8 @@ export const TOOLS: Tool[] = [
           { value: 'fr', label: 'Français' },
           { value: 'en', label: 'Anglais' },
           { value: 'es', label: 'Espagnol' },
-          { value: 'de', label: 'Allemand' }
-        ]
+          { value: 'de', label: 'Allemand' },
+        ],
       },
       {
         name: 'toLang',
@@ -523,9 +516,9 @@ export const TOOLS: Tool[] = [
           { value: 'en', label: 'Anglais' },
           { value: 'fr', label: 'Français' },
           { value: 'es', label: 'Espagnol' },
-          { value: 'de', label: 'Allemand' }
-        ]
-      }
+          { value: 'de', label: 'Allemand' },
+        ],
+      },
     ],
     actions: [
       {
@@ -535,7 +528,7 @@ export const TOOLS: Tool[] = [
         errorMessages: {
           noInput: 'Veuillez entrer un texte à traduire',
           generating: 'Une traduction est déjà en cours',
-          apiError: 'Erreur lors de la traduction'
+          apiError: 'Erreur lors de la traduction',
         },
         api: {
           path: '/ai/translation/translate',
@@ -547,17 +540,17 @@ export const TOOLS: Tool[] = [
               stream: true,
               text: params.input,
               from_lang: params.fromLang || 'fr',
-              to_lang: params.toLang || 'en'
+              to_lang: params.toLang || 'en',
           }),
-          streamProcessor: (chunk: any) => {
+          streamProcessor: () => {
             return null;
           },
           responseTransform: (response) => {
-            return  response.translated_text
-          }
-        }
-      }
-    ]
+            return  response.translated_text;
+          },
+        },
+      },
+    ],
   },
   {
     id: 'text_to_speech',
@@ -566,8 +559,8 @@ export const TOOLS: Tool[] = [
     features: {
       promptInput: {
         placeholder: 'Entrez le texte à convertir en audio...',
-        multiline: true
-      }
+        multiline: true,
+      },
     },
     configFields: [
       {
@@ -580,8 +573,8 @@ export const TOOLS: Tool[] = [
           { value: 'fr', label: 'Français' },
           { value: 'en', label: 'Anglais' },
           { value: 'es', label: 'Espagnol' },
-          { value: 'de', label: 'Allemand' }
-        ]
+          { value: 'de', label: 'Allemand' },
+        ],
       },
       {
         name: 'voice',
@@ -591,9 +584,9 @@ export const TOOLS: Tool[] = [
         defaultValue: '',
         required: true,
         initAction: {
-          type: 'init'
-        }
-      }
+          type: 'init',
+        },
+      },
     ],
     actions: [
       {
@@ -605,7 +598,7 @@ export const TOOLS: Tool[] = [
         errorMessages: {
           noInput: 'Veuillez entrer un texte à convertir',
           generating: 'Une génération est déjà en cours',
-          apiError: 'Erreur lors de la génération audio'
+          apiError: 'Erreur lors de la génération audio',
         },
         api: {
           path: '/ai/speech/text-to-speech',
@@ -615,7 +608,7 @@ export const TOOLS: Tool[] = [
           requestTransform: (params) => ({
               text: params.input,
               voice: params.voice,
-              language: params.language || 'fr'
+              language: params.language || 'fr',
           }),
           responseTransform: (response) => {
             if (response.status === 'completed') {
@@ -625,9 +618,9 @@ export const TOOLS: Tool[] = [
               return `data:audio/wav;base64,${response.audio}`;
             }
             return response;
-          }
-        }
-      }
+          },
+        },
+      },
     ],
     api: {
       init: {
@@ -639,10 +632,10 @@ export const TOOLS: Tool[] = [
         responseTransform: (response) => {
           return response.models.tts.xtts_v2.voices.map((voice: any) => ({
             value: voice.path,
-            label: voice.label
+            label: voice.label,
           }));
-        }
-      }
+        },
+      },
     },
   },
   {
@@ -653,8 +646,8 @@ export const TOOLS: Tool[] = [
       fileUpload: {
         accept: ['audio/*'],
         multiple: false,
-        base64Input: true
-      }
+        base64Input: true,
+      },
     },
     configFields: [
       {
@@ -665,8 +658,8 @@ export const TOOLS: Tool[] = [
         defaultValue: '',
         required: true,
         initAction: {
-          type: 'init'
-        }
+          type: 'init',
+        },
       },
       {
         name: 'micro',
@@ -675,9 +668,8 @@ export const TOOLS: Tool[] = [
         onSelect: {
           action: 'execute',
           // paramName: 'audio',
-          
-        }
-      }
+        },
+      },
     ],
     actions: [
       {
@@ -685,7 +677,7 @@ export const TOOLS: Tool[] = [
         handler: 'handleSpeechToText',
         errorMessages: {
           noFile: 'Veuillez sélectionner un fichier audio',
-          apiError: 'Erreur lors de la transcription'
+          apiError: 'Erreur lors de la transcription',
         },
         api: {
           path: '/ai/speech/speech-to-text',
@@ -693,42 +685,20 @@ export const TOOLS: Tool[] = [
           streaming: true,
           responseType: 'stream',
           streamProcessor: (chunk: any) => {
-            console.log(chunk);
+            console.log('Chunk',chunk);
             return chunk.segment.text;
+          },
+          responseTransform: (response) => {
+            console.log('End',response);
+            return null;
           },
           requestTransform: (params) => ({
               audio: params.base64,
               stream: true,
-              model_size: params.model_size
-          })
-        }
+              model_size: params.model_size,
+          }),
+        },
       },
-      {
-        type: 'execute',
-        handler: 'handleSpeechToText',
-        api: {
-          path: '/ai/speech/speech-to-text',
-          method: 'POST',
-          streaming: true,
-          responseType: 'stream',
-          // requestTransform: (audioBlob: Blob) => {
-          //   return {
-          //       audio: audioBlob,
-          //       stream: true,
-          //       model_size: 'medium' // Utilise la valeur du select model_size
-          //   }
-          // },
-          streamProcessor: (chunk: any) => {
-            console.log(chunk);
-            return chunk.segment.text;
-          },
-          requestTransform: (params) => ({
-              audio: params.audio,
-              stream: true,
-              model_size: params.model_size
-          })
-        }
-      }
     ],
     api: {
       init: {
@@ -740,10 +710,10 @@ export const TOOLS: Tool[] = [
         responseTransform: (response) => {
           return response.models.stt.whisper.sizes.map((size: string) => ({
             value: size,
-            label: `Whisper ${size.charAt(0).toUpperCase() + size.slice(1)}`
+            label: `Whisper ${size.charAt(0).toUpperCase() + size.slice(1)}`,
           }));
-        }
-      }
+        },
+      },
     },
     userBubbleContent: async (toolState: ToolState) => {
       const pendingFiles = toolState.pendingFiles || [];
@@ -755,12 +725,11 @@ export const TOOLS: Tool[] = [
           reader.onerror = (error) => reject(error);
           reader.readAsDataURL(file);
         });
-        
         return base64Audio;
       } else {
         return 'Audio';
       }
-    }
+    },
   },
   {
     id: 'monitoring',
@@ -773,8 +742,8 @@ export const TOOLS: Tool[] = [
         api: {
           path: '/monitor/system/stats',
           method: 'GET',
-          responseType: 'json'
-        }
+          responseType: 'json',
+        },
       },
       {
         type: 'containersList',
@@ -782,8 +751,8 @@ export const TOOLS: Tool[] = [
         api: {
           path: '/monitor/containers',
           method: 'GET',
-          responseType: 'json'
-        }
+          responseType: 'json',
+        },
       },
       {
         type: 'execute',
@@ -791,10 +760,10 @@ export const TOOLS: Tool[] = [
         api: {
           path: '/monitor/containers/{containerId}/{action}',
           method: 'POST',
-          responseType: 'json'
-        }
-      }
-    ]
+          responseType: 'json',
+        },
+      },
+    ],
   },
   {
     id: 'audio_chat',
@@ -808,8 +777,8 @@ export const TOOLS: Tool[] = [
       fileUpload: {
         accept: ['audio/*'],
         multiple: false,
-        base64Input: true
-      }
+        base64Input: true,
+      },
     },
     configFields: [
       {
@@ -818,9 +787,9 @@ export const TOOLS: Tool[] = [
         label: 'Micro',
         onSelect: {
           action: 'execute',
-          paramName: 'audio'
-        }
-      }
+          paramName: 'audio',
+        },
+      },
     ],
     actions: [
       {
@@ -834,8 +803,8 @@ export const TOOLS: Tool[] = [
           requestTransform: (params) => {
             return {
             text: params.input || undefined,
-              audio: params.audio || undefined
-            }
+              audio: params.audio || undefined,
+            };
           },
           streamProcessor: (chunk: any) => {
             if (chunk.type === 'text') {
@@ -847,9 +816,9 @@ export const TOOLS: Tool[] = [
               return null;
             }
             return null;
-          }
-        }
-      }
+          },
+        },
+      },
     ],
     userBubbleContent: async (toolState: ToolState) => {
       const pendingFiles = toolState.pendingFiles || [];
@@ -861,42 +830,32 @@ export const TOOLS: Tool[] = [
           reader.onerror = (error) => reject(error);
           reader.readAsDataURL(file);
         });
-        
         return base64Audio;
       }
       return toolState.input || 'Message';
-    }
+    },
   },
   {
     id: 'files',
     label: 'Gestionnaire de fichiers',
     icon: 'folder',
     customComponent: 'FileManager',
-    useMessagesSystem: false,
     features: {
       fileUpload: {
         accept: ['*/*'],
         multiple: true,
-        dragDrop: true
-      }
+        dragDrop: true,
+      },
     },
-    configFields: [
-      {
-        name: 'currentPath',
-        type: 'text',
-        label: 'Chemin courant',
-        defaultValue: '/',
-      }
-    ],
     actions: [
       {
         type: 'upload',
         handler: 'handleFileUpload',
         errorMessages: {
-          apiError: 'Erreur lors du téléchargement des fichiers'
+          apiError: 'Erreur lors du téléchargement des fichiers',
         },
         api: {
-          path: '/v1/files/upload',
+          path: '/files/upload',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => {
@@ -908,250 +867,58 @@ export const TOOLS: Tool[] = [
             }
             formData.append('path', params.currentPath || '/');
             return formData;
-          }
-        }
+          },
+        },
       },
       {
-        type: 'execute',
+        type: 'list_directory',
         handler: 'handleListDirectory',
         api: {
-          path: '/v1/files/list/{path}',
-          method: 'GET',
-          responseType: 'json',
-          requestTransform: (params) => ({
-            path: params.currentPath || '/'
-          })
-        }
-      },
-      {
-        type: 'execute',
-        handler: 'handleCreateDirectory',
-        api: {
-          path: '/v1/files/directory/create',
+          path: '/files/list',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
-            path: `${params.currentPath}/${params.directoryName}`
-          })
-        }
+            path: params.currentPath || '/',
+          }),
+        },
       },
       {
-        type: 'execute',
+        type: 'create_directory',
+        handler: 'handleCreateDirectory',
+        api: {
+          path: '/files/directory/create',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            path: `${params.currentPath}/${params.directoryName}`,
+          }),
+        },
+      },
+      {
+        type: 'delete_file',
         handler: 'handleDeleteFile',
         api: {
-          path: '/v1/files/delete',
+          path: '/files/delete',
           method: 'DELETE',
           responseType: 'json',
           requestTransform: (params) => ({
-            path: params.filePath
-          })
-        }
+            path: params.filePath,
+          }),
+        },
       },
       {
-        type: 'execute',
+        type: 'move_file',
         handler: 'handleMoveFile',
         api: {
-          path: '/v1/files/move',
+          path: '/files/move',
           method: 'POST',
           responseType: 'json',
           requestTransform: (params) => ({
             source: params.sourcePath,
-            destination: params.destinationPath
-          })
-        }
-      }
-    ]
-  }
+            destination: params.destinationPath,
+          }),
+        },
+      },
+    ],
+  },
 ];
-
-export type ThemeType = 'light' | 'dark' | 'dim' | 'system' | 'ocean' | 'forest';
-
-export const THEME_OPTIONS: Record<ThemeType, { label: string; icon: string }> = {
-  light: { label: 'Clair', icon: 'sunny-outline' },
-  dark: { label: 'Sombre', icon: 'moon-outline' },
-  dim: { label: 'Tamisé', icon: 'contrast-outline' },
-  system: { label: 'Système', icon: 'phone-portrait-outline' },
-  ocean: { label: 'Océan', icon: 'water-outline' },
-  forest: { label: 'Forêt', icon: 'leaf-outline' }
-} as const;
-
-export interface Theme {
-  colors: {
-    primary: string;
-    background: string;
-    text: string;
-    userBubble: string;
-    aiBubble: string;
-    userText: string;
-    aiText: string;
-    inputBackground: string;
-    border: string;
-    gray0: string;
-    gray25: string;
-    gray50: string;
-    gray75: string;
-    gray100: string;
-    gray150: string;
-    gray200: string;
-    gray250: string;
-    gray300: string;
-    gray350: string;
-    gray400: string;
-    gray450: string;
-    gray500: string;
-    gray550: string;
-    gray600: string;
-    gray650: string;
-    gray700: string;
-    gray750: string;
-    gray800: string;
-    gray850: string;
-    gray900: string;
-    gray950: string;
-    gray1000: string;
-  };
-  fontSizes: {
-    small: number;
-    medium: number;
-    large: number;
-  };
-} 
-
-export interface Message {
-  role: 'system' | 'user' | 'assistant' | 'human' | 'ai';
-  content: string;
-}
-
-export interface Conversation {
-  id: string;
-  messages: Message[];
-  timestamp: number;
-} 
-
-export interface ToolGroup {
-  id: string;
-  label: string;
-  icon: string;
-  tools: ToolType[];
-}
-
-export const TOOL_GROUPS: ToolGroup[] = [
-  {
-    id: 'chat',
-    label: 'Chat',
-    icon: 'chatbubbles',
-    tools: ['llm', 'audio_chat']
-  },
-  {
-    id: 'image',
-    label: 'Images',
-    icon: 'image',
-    tools: ['image_generation', 'image_analysis', 'image_refine']
-  },
-  {
-    id: 'text',
-    label: 'Texte',
-    icon: 'text',
-    tools: ['ocr', 'translation']
-  },
-  {
-    id: 'audio',
-    label: 'Audio',
-    icon: 'volume-high',
-    tools: ['text_to_speech','speech_to_text']
-  },
-  {
-    id: 'files',
-    label: 'Fichiers',
-    icon: 'folder',
-    tools: ['files']
-  }
-];
-
-// Helper pour obtenir le groupe d'un outil
-export const getToolGroup = (toolId: ToolType): ToolGroup | undefined => {
-  return TOOL_GROUPS.find(group => group.tools.includes(toolId));
-};
-
-// Helper pour obtenir tous les outils d'un groupe
-export const getToolsInGroup = (groupId: string): Tool[] => {
-  const group = TOOL_GROUPS.find(g => g.id === groupId);
-  if (!group) return [];
-  return TOOLS.filter(tool => group.tools.includes(tool.id));
-};
-
-export interface SystemMetrics {
-  cpu: {
-    percent: number;
-    frequency_current: number;
-    frequency_max: number;
-    cores: number;
-  };
-  memory: {
-    total: number;
-    available: number;
-    percent: number;
-    used: number;
-  };
-  gpu: {
-    id: number;
-    name: string;
-    load: number;
-    memory_used: number;
-    memory_total: number;
-    temperature: number;
-  }[];
-}
-
-export interface SystemStats {
-  cpu_percent: number;
-  memory: {
-    total: number;
-    available: number;
-    percent: number;
-  };
-  disk: {
-    total: number;
-    used: number;
-    free: number;
-    percent: number;
-  };
-}
-
-export interface ContainerStats {
-  cpu_percent: number;
-  memory_percent: number;
-  memory_usage: number;
-  memory_limit: number;
-}
-
-export interface Container {
-  id: string;
-  name: string;
-  status: string;
-  image: string;
-  created: string;
-  ports: Record<string, any>;
-  stats: ContainerStats;
-}
-
-// Ajout d'une interface pour la configuration TTS
-interface TTSConfig {
-  enabled: boolean;
-  voice_path: string;
-  language: string;
-}
-
-export interface FileItem {
-  name: string;
-  path: string;
-  type: 'file' | 'directory';
-  size?: number;
-  modified?: string;
-  extension?: string;
-}
-
-export const CUSTOM_COMPONENTS: Record<string, React.ComponentType> = {
-  'FileManager': FileManager,
-  // Ajouter d'autres composants ici au besoin
-};

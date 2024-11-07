@@ -1,40 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FileItem } from '../types';
+import { FileItem } from '../types/files';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
-import { useToolContext } from '../contexts/ToolContext';
+import { useTool } from '../hooks/useTool';
 
 export const FileManager: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
-  const { toolConfig, updateToolConfig, handleToolAction } = useToolContext();
+  const { 
+    toolStates, 
+    currentTool,
+    executeToolAction,
+    updateToolConfig,
+    loading: { isLoading }
+  } = useTool();
+
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const currentPath = toolConfig.currentPath || '/';
+  const currentPath = toolStates[currentTool]?.config?.currentPath || '/';
 
   const loadDirectory = async () => {
-    setLoading(true);
     try {
-      const response = await handleToolAction('execute', {
-        handler: 'handleListDirectory',
+      const response = await executeToolAction('list_directory', {
         currentPath
       });
-      setFiles(response);
+      
+      if (response && response.status === 'success') {
+        const itemsWithPath = response.items.map(item => ({
+          ...item,
+          path: `${response.path}${response.path.endsWith('/') ? '' : '/'}${item.name}`
+        }));
+        setFiles(itemsWithPath);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement du répertoire:', error);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    loadDirectory();
+     loadDirectory();
   }, [currentPath]);
 
   const handleFileClick = (file: FileItem) => {
@@ -54,8 +64,7 @@ export const FileManager: React.FC = () => {
   const handleCreateFolder = async () => {
     if (!newFolderName) return;
     try {
-      await handleToolAction('execute', {
-        handler: 'handleCreateDirectory',
+      await executeToolAction('create_directory', {
         directoryName: newFolderName,
         currentPath
       });
@@ -70,8 +79,7 @@ export const FileManager: React.FC = () => {
   const handleDeleteSelected = async () => {
     for (const filePath of selectedFiles) {
       try {
-        await handleToolAction('execute', {
-          handler: 'handleDeleteFile',
+        await executeToolAction('delete_file', {
           filePath
         });
       } catch (error) {
@@ -94,8 +102,7 @@ export const FileManager: React.FC = () => {
 
   const handleUpload = async (files: File[]) => {
     try {
-      await handleToolAction('upload', {
-        handler: 'handleFileUpload',
+      await executeToolAction('upload', {
         files,
         currentPath
       });
@@ -132,7 +139,7 @@ export const FileManager: React.FC = () => {
       </View>
     );
   };
-
+  // loadDirectory();
   return (
     <View style={styles.fileManagerContainer}>
       <View style={styles.fileManagerToolbar}>
@@ -197,7 +204,7 @@ export const FileManager: React.FC = () => {
         } : undefined}
         onDrop={Platform.OS === 'web' ? handleDrop : undefined}
       >
-        {loading ? (
+        {isLoading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Chargement...</Text>
           </View>
@@ -208,18 +215,18 @@ export const FileManager: React.FC = () => {
                 key={file.path}
                 style={[
                   styles.fileItem,
-                  selectedFiles.includes(file.path) && styles.fileItemSelected
+                  selectedFiles.includes(file.path || '') && styles.fileItemSelected
                 ]}
                 onPress={() => handleFileClick(file)}
               >
                 <Ionicons
-                  name={file.type === 'directory' ? 'folder' : getFileIcon(file.extension)}
+                  name={file.type === 'directory' ? 'folder' : getFileIcon(file.name.split('.').pop())}
                   size={24}
                   color={theme.colors.text}
                 />
                 <View style={styles.fileDetails}>
                   <Text style={styles.fileName}>{file.name}</Text>
-                  {file.type === 'file' && (
+                  {file.type === 'file' && file.size !== null && (
                     <Text style={styles.fileInfo}>
                       {formatFileSize(file.size)} • {formatDate(file.modified)}
                     </Text>
@@ -250,8 +257,8 @@ const getFileIcon = (extension?: string): string => {
   }
 };
 
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return '0 B';
+const formatFileSize = (bytes: number | null): string => {
+  if (bytes === null || bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));

@@ -26,6 +26,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     deleteConversation
   } = useConversation();
 
+  const conversationsWithKeys = React.useMemo(() => {
+    return conversations.map((conversation, index) => ({
+      ...conversation,
+      tempKey: conversation.id || `temp-${index}-${conversation.timestamp}`
+    }));
+  }, [conversations]);
+
   const truncateMessage = (message: string) => {
     return message.length > MAX_PREVIEW_LENGTH
       ? message.substring(0, MAX_PREVIEW_LENGTH) + '...'
@@ -33,7 +40,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   if (!isOpen) return null;
-
   return (
     <View style={[
       styles.sidebar,
@@ -63,8 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </TouchableOpacity>
       
       <FlatList
-        data={conversations}
-        keyExtractor={(item) => item.id}
+        data={conversationsWithKeys}
+        keyExtractor={(item) => item.tempKey}
         renderItem={({ item }) => (
           <View style={[
             styles.conversationItemContainer,
@@ -75,20 +81,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 styles.conversationItem,
                 currentConversationId === item.id && { backgroundColor: theme.colors.gray100 }
               ]}
-              onPress={() => loadConversation(item.id)}
+              onPress={() => item.id ? loadConversation(item.id) : null}
             >
               <Text style={[styles.conversationTimestamp, { color: theme.colors.text }]}>
                 {new Date(item.timestamp).toLocaleString()}
               </Text>
               <Text style={[styles.conversationPreview, { color: theme.colors.text }]}>
-                {item.messages.length > 0
-                  ? truncateMessage(item.messages[0].content)
+                {item.title && item.title.length > 0
+                  ? truncateMessage(item.title)
                   : 'Nouvelle conversation'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => deleteConversation(item.id)}
+              onPress={() => item.id ? deleteConversation(item.id) : deleteConversation(item.tempKey)}
             >
               <Ionicons name="trash-outline" size={24} color="red" />
             </TouchableOpacity>
