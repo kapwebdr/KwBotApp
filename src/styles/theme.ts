@@ -1,5 +1,5 @@
-import { Theme, ThemeType } from './types/themes';
-import { themeStorage } from './services/storage';
+import { Theme, ThemeType } from '../types/themes';
+import { themeStorage } from '../services/storage';
 
 export const lightTheme: Theme = {
   colors: {

@@ -209,7 +209,7 @@ export const FileManager: React.FC = () => {
             <Text style={styles.loadingText}>Chargement...</Text>
           </View>
         ) : (
-          <ScrollView style={styles.fileList}>
+          <ScrollView contentContainerStyle={styles.fileList}>
             {files.map((file) => (
               <TouchableOpacity
                 key={file.path}

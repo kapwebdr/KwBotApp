@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { Theme } from '../types/themes';
-import { lightTheme } from '../theme';
+import { lightTheme } from './theme';
 
 export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
@@ -29,7 +29,6 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
       backgroundColor: theme.colors.background,
     },
 
