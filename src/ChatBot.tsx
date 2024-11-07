@@ -82,43 +82,43 @@ const ChatBot: React.FC = () => {
 
   return (
     <NavigationContainer>
-          <View style={styles.container}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={toggleSidebar}>
-                <Ionicons name="menu" size={24} color={theme.colors.primary} />
-              </TouchableOpacity>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={toggleSidebar}>
+            <Ionicons name="menu" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
 
-              <Monitoring />
+          <Monitoring />
 
-              <ThemeSelector />
-            </View>
+          <ThemeSelector />
+        </View>
 
-            <ChatInterface />
-            <View style={styles.bottomContainer}>
-              <Tool />
-              <BottomTabNavigator />
-            </View>
-            
-            {isSidebarOpen && (
-              <TouchableWithoutFeedback onPress={closeSidebar}>
-                <View style={styles.sidebarOverlay} />
-              </TouchableWithoutFeedback>
-            )}
+        <ChatInterface />
+        <View style={styles.bottomContainer}>
+          <Tool />
+          <BottomTabNavigator />
+        </View>
 
-            <Sidebar
-              isOpen={isSidebarOpen}
-              sidebarAnimation={sidebarAnimation}
-              onClose={closeSidebar}
-            />
+        {isSidebarOpen && (
+          <TouchableWithoutFeedback onPress={closeSidebar}>
+            <View style={styles.sidebarOverlay} />
+          </TouchableWithoutFeedback>
+        )}
 
-            {!isApiAvailable && (
-              <ErrorModal
-                isVisible={true}
-                onRetry={handleRetryConnection}
-                message={apiErrorMessage}
-              />
-            )}
-          </View>
+        <Sidebar
+          isOpen={isSidebarOpen}
+          sidebarAnimation={sidebarAnimation}
+          onClose={closeSidebar}
+        />
+
+        {!isApiAvailable && (
+          <ErrorModal
+            isVisible={true}
+            onRetry={handleRetryConnection}
+            message={apiErrorMessage}
+          />
+        )}
+      </View>
     </NavigationContainer>
   );
 };

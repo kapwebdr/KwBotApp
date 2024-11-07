@@ -265,7 +265,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       color: theme.colors.primary,
       fontWeight: 'bold',
     },
-    
+
     // Styles pour InputBar
     inputContainer: {
       flexDirection: 'row',
@@ -293,7 +293,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     uploadButton: {
       ...baseButton,
     },
-    
+
     // Styles pour ToolConfig
     configFields: {
       display: 'flex',
@@ -328,7 +328,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       gap: 8,
       alignItems: 'center',
     },
-    
+
     // Styles pour les fichiers en attente
     pendingFileContainer: {
       flexDirection: 'row',
@@ -348,7 +348,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       marginLeft: 4,
       padding: 2,
     },
-    
+
     // Styles pour les états désactivés
     inputDisabled: {
       opacity: 0.5,
@@ -1105,8 +1105,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     notificationContainer: {
       position: 'absolute',
       top: 0,
-      left: '50%',
-      transform: [{ translateX: '-50%' }],
+      right: 0,
       zIndex: 1000,
       maxWidth: 600,
       width: '90%',
@@ -1232,4 +1231,4 @@ export const getWebStyles = (themeContext: { theme: Theme }) => {
       width: '100%',
     },
   };
-}; 
+};

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Tool, ToolConfig  } from '../types/tools';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles, getSelectStyle } from '../styles/theme.styles';
@@ -128,29 +129,25 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
                 styles.selectContainer,
                 hasError && styles.selectContainerError
               ]}>
-                <select
-                  value={selectConfig.value}
-                  onChange={(e) => selectConfig.onChange(e.target.value)}
+                <Picker
+                  selectedValue={selectConfig.value}
+                  onValueChange={(itemValue) => selectConfig.onChange(itemValue)}
+                  enabled={!selectConfig.isLoading && !loading.isLoading}
                   style={getSelectStyle({ theme }, selectConfig.isLoading, hasError)}
-                  disabled={selectConfig.isLoading || loading.isLoading}
                 >
-                  <option value="">Sélectionnez un modèle</option>
-                  {Array.isArray(selectConfig.options) && selectConfig.options.map((option: string | { value: string; label: string }) => {
+                  <Picker.Item label="Sélectionnez un modèle" value="" />
+                  {Array.isArray(selectConfig.options) && selectConfig.options.map((option) => {
                     if (typeof option === 'string') {
                       return (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
+                        <Picker.Item key={option} label={option} value={option} />
                       );
                     } else {
                       return (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                        <Picker.Item key={option.value} label={option.label} value={option.value} />
                       );
                     }
                   })}
-                </select>
+                </Picker>
               </View>
               {hasError && (
                 <Text style={styles.errorText}>{toolStates[currentTool].errors[field.name]}</Text>

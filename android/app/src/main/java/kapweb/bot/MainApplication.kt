@@ -1,4 +1,4 @@
-package com.chatbotapp
+package kapweb.bot
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -1,4 +1,4 @@
-package com.chatbotapp
+package kapweb.bot
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

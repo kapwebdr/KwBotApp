@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { View } from 'react-native';
+import { View, LayoutChangeEvent } from 'react-native';
 import { ToolConfigComponent } from './ToolConfig';
 import { createStyles } from '../styles/theme.styles';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,33 +9,23 @@ export const Tool: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const { tool, toolStates, updateToolConfig, setToolHeight } = useTool();
-  const toolRef = useRef<View>(null);
 
-  const updateHeight = useCallback(() => {
-    if (toolRef.current) {
-      // @ts-ignore - getBoundingClientRect existe sur web
-      const height = toolRef.current.getBoundingClientRect?.().height || 0;
-      setToolHeight(height);
-    }
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    console.log('Tool height:', height);
+    setToolHeight(height);
   }, [setToolHeight]);
 
   useEffect(() => {
-    updateHeight();
-    // Observer les changements de taille
-    const resizeObserver = new ResizeObserver(updateHeight);
-    if (toolRef.current) {
-      // @ts-ignore
-      resizeObserver.observe(toolRef.current);
-    }
-    return () => resizeObserver.disconnect();
-  }, [updateHeight]);
+    console.log('Tool component mounted');
+    return () => console.log('Tool component unmounted');
+  }, []);
 
   if (!tool) return null;
   const toolConfig = toolStates[tool.id]?.config;
 
   return (
     <View 
-      ref={toolRef}
       style={[
         styles.toolContainer,
         {
@@ -48,7 +38,7 @@ export const Tool: React.FC = () => {
           borderTopColor: theme.colors.border,
         }
       ]}
-      onLayout={updateHeight}
+      onLayout={handleLayout}
     >
       <ToolConfigComponent
         tool={tool}
@@ -57,4 +47,4 @@ export const Tool: React.FC = () => {
       />
     </View>
   );
-}; 
+};

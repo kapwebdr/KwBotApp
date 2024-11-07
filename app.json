@@ -15,27 +15,18 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "kapweb.bot"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "kapweb.bot"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "packagerOpts": {
-      "proxy": {
-        "/api": {
-          "target": "http://localhost:1234",
-          "pathRewrite": {
-            "^/api": ""
-          }
-        }
-      }
-    },
-    "entryPoint": "./src/App.tsx"
+    }
   }
 }

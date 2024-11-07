@@ -32,7 +32,7 @@ export const NotificationManager: React.FC = () => {
               />
               <Text style={[
                 styles.notificationText,
-                styles[`notificationText${notification.type}`]
+                styles[`notificationText${notification.type}`],
               ]}>
                 {notification.message}
               </Text>

@@ -12,7 +12,7 @@ export const Messages: React.FC = () => {
   const styles = createStyles({ theme });
   const { messages } = useConversation();
   const { 
-    loading, 
+    loading,
     tool,
     toolHeight
   } = useTool();
@@ -66,6 +66,7 @@ export const Messages: React.FC = () => {
         renderItem={({ item }) => item}
         keyExtractor={(_, index) => `message-${index}`}
         style={styles.messagesList}
+        // contentContainerStyle={{ flexGrow: 1 }}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         maintainVisibleContentPosition={{
@@ -77,4 +78,4 @@ export const Messages: React.FC = () => {
   );
 };
 
-export default Messages; 
+export default Messages;
