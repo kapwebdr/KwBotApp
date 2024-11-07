@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import Messages from './Messages';
 import { createStyles } from '../styles/theme.styles';
@@ -12,11 +12,13 @@ import { LoadingBubble } from './LoadingBubble';
 export const ChatInterface: React.FC = () => {
   const { theme } = useTheme();
   const { currentTool } = useTool();
-  const { currentConversationId, messages, isLoading } = useConversation();
+  const { currentConversationId, isLoading } = useConversation();
   const styles = createStyles({ theme });
   const tool = TOOLS.find(t => t.id === currentTool);
 
-  if (!currentConversationId || isLoading) {
+  const isNewConversation = currentConversationId === '';
+
+  if (isLoading && !isNewConversation) {
     return (
       <View style={styles.mainContent}>
         <LoadingBubble status="Chargement de la conversation..." />
@@ -38,10 +40,3 @@ export const ChatInterface: React.FC = () => {
     </View>
   );
 };
-
-const styles = createStyles(({ theme }) => ({
-  mainContent: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-}));

@@ -21,42 +21,54 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [currentToolId, setCurrentToolId] = useState<ToolType>('llm');
   const [isLoading, setIsLoading] = useState(false);
 
-  const setMessageSave = async (message: Message, toolConfig?: any,conversationId?:string) => {
+  const setMessageSave = async (message: Message, toolConfig?: any, conversationId?: string) => {
     let currentId = currentConversationId;
     try {
-      if(conversationId)
-      {
+      if (conversationId) {
         currentId = conversationId;
         setCurrentConversationId(conversationId);
       }
+
+      const apiId = currentId === ''? undefined : currentId;
       const newId = await conversationService.updateMessage(
-        currentId || undefined,
+        apiId,
         message,
         currentToolId,
         toolConfig
       );
-      if (!currentId) {
+
+      if (!apiId) {
         setCurrentConversationId(newId);
         await conversationService.setCurrentConversation(newId);
-        const newConversation = {
-          id: newId,
-          messages: [message],
-          timestamp: Date.now()
-        };
+        setConversations(prev => {
+          const updatedConversations = prev.map(conv => {
+            if (conv.id === '') {
+              return {
+                ...conv,
+                id: newId,
+                title: message.content.substring(0, 50),
+                messages: [message],
+                timestamp: Date.now(),
+              };
+            }
+            return conv;
+          });
+          return updatedConversations;
+        });
 
-        setConversations(prev => [newConversation, ...prev]);
         return newId;
       } else {
         setConversations(prev => prev.map(conv =>
           conv.id === currentId
-            ? { 
-                ...conv, 
+            ? {
+                ...conv,
                 messages: [...conv.messages, message],
-                timestamp: Date.now() 
+                title: conv.title || message.content.substring(0, 50),
+                timestamp: Date.now()
               }
             : conv
         ));
-        
+
         return currentId;
       }
     } catch (error) {
@@ -66,6 +78,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const loadInitialConversations = async () => {
+    setIsLoading(true);
     const { conversations: loadedConversations, currentId } = await conversationService.loadConversations();
     if (Array.isArray(loadedConversations)) {
       setConversations(loadedConversations);
@@ -84,9 +97,16 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } else {
       startNewConversation();
     }
+    setIsLoading(false);
   };
 
   const loadConversation = async (conversationId: string) => {
+    if (conversationId === '') {
+      setMessages([]);
+      setCurrentConversationId(conversationId);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setMessages([]);
@@ -107,7 +127,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const deleteConversation = async (idOrTempKey: string) => {
     try {
       const updatedConversations = conversations.filter(conv => 
-        (conv.id !== idOrTempKey && `temp-${conversations.indexOf(conv)}-${conv.timestamp}` !== idOrTempKey)
+        (conv.id !== idOrTempKey)
       );
       setConversations(updatedConversations);
       if (idOrTempKey === currentConversationId) {
@@ -118,7 +138,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
 
-      if (idOrTempKey.startsWith('temp-')) {
+      if (idOrTempKey === '') {
         return;
       }
 
@@ -132,12 +152,12 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const startNewConversation = async () => {
+  const startNewConversation = () => {
     const newConversation = conversationService.createNewConversation();
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversationId(newConversation.id);
     setMessages([]);
-    await conversationService.setCurrentConversation(newConversation.id);
+    setIsLoading(false);
   };
 
   const updateSystemMessage = (message: string) => {

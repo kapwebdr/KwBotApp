@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import ErrorModal from './components/ErrorModal';
 import { createStyles } from './styles/theme.styles';
 import { Sidebar } from './components/Sidebar';
-import { ToolProvider } from './contexts/ToolContext';
 import { useTheme } from './contexts/ThemeContext';
 import { Monitoring } from './components/Monitoring';
 import { ThemeSelector } from './components/ThemeSelector';

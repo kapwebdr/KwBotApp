@@ -40,7 +40,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const currentState = toolStates[currentTool];
   const pendingFiles = currentState?.pendingFiles || [];
   const input = currentState?.input || '';
-  const { currentConversationId } = useConversation();
+  const { isLoading } = useConversation();
   const handleConfigChange = (name: string, value: any) => {
     onConfigChange({
       ...config,
@@ -53,7 +53,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const hasUrlInput = !!tool.features?.urlInput;
 
   const handleSend = async () => {
-    if (!currentConversationId) {
+    if (isLoading) {
       return; // Désactive l'envoi si aucune conversation n'est chargée
     }
 
@@ -357,15 +357,15 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
             <TouchableOpacity 
               style={[
                 styles.sendButton,
-                isGenerating ? styles.stopButton : (!input.trim() && !pendingFiles || !currentConversationId) && styles.sendButtonDisabled
+                isGenerating ? styles.stopButton : (!input.trim() && !pendingFiles || isLoading) && styles.sendButtonDisabled
               ]}
               onPress={isGenerating ? handleStop : handleSend}
-              disabled={!isGenerating && (!input.trim() && !pendingFiles || !currentConversationId)}
+              disabled={!isGenerating && (!input.trim() && !pendingFiles || isLoading)}
             >
               <Ionicons 
                 name={isGenerating ? "stop" : "send"}
                 size={styles.buttonIcon.size}
-                color={isGenerating ? "red" : (!input.trim() && !pendingFiles || !currentConversationId) ? theme.colors.gray400 : theme.colors.primary}
+                color={isGenerating ? "red" : (!input.trim() && !pendingFiles || isLoading) ? theme.colors.gray400 : theme.colors.primary}
               />
             </TouchableOpacity>
           </View>

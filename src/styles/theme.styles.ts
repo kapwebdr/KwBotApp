@@ -1179,6 +1179,15 @@ export const createStyles = (themeContext: { theme: Theme }) => {
       borderLeftWidth: 4,
       borderLeftColor: theme.colors.info,
     },
+
+    disabledButton: {
+      opacity: 0.5,
+      backgroundColor: theme.colors.gray400,
+    },
+
+    disabledButtonText: {
+      opacity: 0.7,
+    },
   });
 };
 

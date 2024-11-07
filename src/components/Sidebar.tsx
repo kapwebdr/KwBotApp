@@ -28,23 +28,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
     deleteConversation
   } = useConversation();
 
+  const hasTemporaryConversation = React.useMemo(() => {
+    return conversations.some(conv => !conv.id || conv.id === '');
+  }, [conversations]);
+
   const handleLoadConversation = (id: string) => {
     onClose();
+    console.log('handleLoadConversation',id);
     loadConversation(id);
   };
 
   const handleNewConversation = () => {
-    onClose();
-    startNewConversation();
+    if (!hasTemporaryConversation) {
+      onClose();
+      startNewConversation();
+    }
   };
 
   const conversationsWithKeys = React.useMemo(() => {
-    return conversations.map((conversation, index) => ({
+    return conversations.map((conversation) => ({
       ...conversation,
-      tempKey: conversation.id || `temp-${index}-${conversation.timestamp}`
+      tempKey: conversation.id || '',
     }));
   }, [conversations]);
-
   const truncateMessage = (message: string) => {
     return message.length > MAX_PREVIEW_LENGTH
       ? message.substring(0, MAX_PREVIEW_LENGTH) + '...'
@@ -71,12 +77,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <TouchableOpacity 
         style={[
           styles.newConversationButton,
-          { backgroundColor: theme.colors.primary }
+          { backgroundColor: theme.colors.primary },
+          hasTemporaryConversation && styles.disabledButton
         ]} 
         onPress={handleNewConversation}
+        disabled={hasTemporaryConversation}
       >
-        <Text style={[styles.newConversationButtonText, { color: theme.colors.background }]}>
-          Nouvelle conversation
+        <Text style={[
+          styles.newConversationButtonText, 
+          { color: theme.colors.background },
+          hasTemporaryConversation && styles.disabledButtonText
+        ]}>
+          {hasTemporaryConversation 
+            ? "Conversation en cours..." 
+            : "Nouvelle conversation"}
         </Text>
       </TouchableOpacity>
       
@@ -93,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 styles.conversationItem,
                 currentConversationId === item.id && { backgroundColor: theme.colors.gray100 }
               ]}
-              onPress={() => item.id ? handleLoadConversation(item.id) : null}
+              onPress={() => item.id ? handleLoadConversation(item.id) : handleLoadConversation('')}
             >
               <Text style={[styles.conversationTimestamp, { color: theme.colors.text }]}>
                 {new Date(item.timestamp).toLocaleString()}
