@@ -564,6 +564,18 @@ export const TOOLS: Tool[] = [
     },
     configFields: [
       {
+        name: 'model_type',
+        type: 'select',
+        label: 'Type de modèle',
+        defaultValue: 'xtts_v2',
+        required: true,
+        options: [
+          { value: 'xtts_v2', label: 'XTTS v2' },
+          { value: 'vits', label: 'VITS' },
+          { value: 'coqui', label: 'Coqui' },
+        ],
+      },
+      {
         name: 'language',
         type: 'select',
         label: 'Langue',
@@ -606,9 +618,10 @@ export const TOOLS: Tool[] = [
           streaming: true,
           responseType: 'stream',
           requestTransform: (params) => ({
-              text: params.input,
-              voice: params.voice,
-              language: params.language || 'fr',
+            text: params.input,
+            voice: params.voice,
+            language: params.language || 'fr',
+            model_type: params.model_type || 'xtts_v2',
           }),
           responseTransform: (response) => {
             if (response.status === 'completed') {
@@ -630,7 +643,7 @@ export const TOOLS: Tool[] = [
         requestTransform: () => ({
         }),
         responseTransform: (response) => {
-          return response.models.tts.xtts_v2.voices.map((voice: any) => ({
+          return response.models.tts[response.model_type || 'xtts_v2'].voices.map((voice: any) => ({
             value: voice.path,
             label: voice.label,
           }));
@@ -706,9 +719,10 @@ export const TOOLS: Tool[] = [
         requestTransform: () => ({
         }),
         responseTransform: (response) => {
-          return response.models.stt.map((size: string) => ({
+          console.log(response.models.stt.whisper.models);
+          return Object.entries(response.models.stt.whisper.models).map(([size, config]) => ({
             value: size,
-            label: `Whisper ${size.charAt(0).toUpperCase() + size.slice(1)}`,
+            label: `${(config as any).name} - ${(config as any).description}`,
           }));
         },
       },
