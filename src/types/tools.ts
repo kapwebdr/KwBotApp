@@ -690,7 +690,7 @@ export const TOOLS: Tool[] = [
           },
           responseTransform: (response) => {
             console.log('End',response);
-            return null;
+            return response.text;
           },
           requestTransform: (params) => ({
               audio: params.base64,

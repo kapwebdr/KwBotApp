@@ -11,11 +11,18 @@ export const Monitoring: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [showContainers, setShowContainers] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
 
   const fetchData = async () => {
+    if (isFetching) {
+      console.log('Une requête est déjà en cours, ignorée');
+      return;
+    }
+
     try {
+      setIsFetching(true);
       const [statsResponse, containersResponse] = await Promise.all([
-        apiHandler.executeApiAction('monitoring', 'systemStats',null, 'handleSystemStats'),
+        apiHandler.executeApiAction('monitoring', 'systemStats', null, 'handleSystemStats'),
         apiHandler.executeApiAction('monitoring', 'containersList', null, 'handleContainersList')
       ]);
 
@@ -25,12 +32,16 @@ export const Monitoring: React.FC = () => {
     } catch (err) {
       setError('Erreur données');
       console.error('Erreur lors de la récupération des données:', err);
+    } finally {
+      setIsFetching(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 1200000);
+    const interval = setInterval(() => {
+      fetchData();
+    }, 1200000);
     return () => clearInterval(interval);
   }, []);
 
@@ -40,7 +51,7 @@ export const Monitoring: React.FC = () => {
         containerId,
         action,
       }, 'handleContainerAction');
-      fetchData();
+      await new Promise(resolve => setTimeout(resolve, 20000));
     } catch (err) {
       setError(`Erreur ${action}`);
     }
@@ -200,4 +211,4 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
-}); 
+});
