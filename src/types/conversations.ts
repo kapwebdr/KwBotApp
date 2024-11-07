@@ -63,7 +63,7 @@ export interface Message {
 export interface ConversationContextType {
   messages: Message[];
   setMessages: (messages: Message[]) => void;
-  setMessageSave: (message: Message, toolConfig?: any) => void;
+  setMessageSave: (message: Message, toolConfig?: any,conversationId?:string) => string;
   conversations: Conversation[];
   currentConversationId: string | null;
   systemMessage: string;

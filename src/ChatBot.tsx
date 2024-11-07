@@ -9,8 +9,6 @@ import { useTheme } from './contexts/ThemeContext';
 import { Monitoring } from './components/Monitoring';
 import { ThemeSelector } from './components/ThemeSelector';
 import { ChatInterface } from './components/ChatInterface';
-import { BottomTabNavigator } from './navigation/BottomTabNavigator';
-import { Tool } from './components/Tool';
 import { useNotification } from './hooks/useNotification';
 import { notificationService } from './services/notificationService';
 import { useConversation } from './contexts/ConversationContext';
@@ -28,7 +26,7 @@ const ChatBot: React.FC = () => {
 
   useEffect(() => {
     loadInitialConversations();
-    notificationService.init((type, message, isPermanent) => 
+    notificationService.init((type, message, isPermanent) =>
       addNotification(type, message, isPermanent)
     );
   }, []);
@@ -94,10 +92,6 @@ const ChatBot: React.FC = () => {
         </View>
 
         <ChatInterface />
-        <View style={styles.bottomContainer}>
-          <Tool />
-          <BottomTabNavigator />
-        </View>
 
         {isSidebarOpen && (
           <TouchableWithoutFeedback onPress={closeSidebar}>

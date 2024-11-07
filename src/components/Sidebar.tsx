@@ -34,7 +34,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleLoadConversation = (id: string) => {
     onClose();
-    console.log('handleLoadConversation',id);
     loadConversation(id);
   };
 

@@ -1186,6 +1186,41 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     disabledButtonText: {
       opacity: 0.7,
     },
+
+    fileManagerToolContainer: {
+      padding: 10,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+
+    uploadControls: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+
+    pendingFilesContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 10,
+    },
+
+    uploadButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.inputBackground,
+      padding: 8,
+      borderRadius: 8,
+      gap: 8,
+    },
+
+    uploadButtonText: {
+      color: theme.colors.text,
+      fontSize: 14,
+    },
   });
 };
 

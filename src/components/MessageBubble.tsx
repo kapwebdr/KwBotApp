@@ -206,12 +206,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               onPress={handleDownload}
               style={[
                 styles.actionButton,
-                isButtonPressed === 'download' && styles.actionButtonActive
+                isButtonPressed === 'download' && styles.actionButtonActive,
               ]}
             >
-              <Ionicons 
-                name="download-outline" 
-                size={16} 
+              <Ionicons
+                name="download-outline"
+                size={16}
                 style={isButtonPressed === 'download' ? styles.actionIconActive : styles.actionIcon}
               />
             </TouchableOpacity>

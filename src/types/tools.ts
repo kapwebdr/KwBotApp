@@ -546,7 +546,7 @@ export const TOOLS: Tool[] = [
             return null;
           },
           responseTransform: (response) => {
-            return  response.translated_text;
+            return  response.text;
           },
         },
       },
@@ -685,11 +685,9 @@ export const TOOLS: Tool[] = [
           streaming: true,
           responseType: 'stream',
           streamProcessor: (chunk: any) => {
-            console.log('Chunk',chunk);
-            return chunk.segment.text;
+            return chunk.text;
           },
           responseTransform: (response) => {
-            console.log('End',response);
             return response.text;
           },
           requestTransform: (params) => ({
@@ -708,7 +706,7 @@ export const TOOLS: Tool[] = [
         requestTransform: () => ({
         }),
         responseTransform: (response) => {
-          return response.models.stt.whisper.sizes.map((size: string) => ({
+          return response.models.stt.map((size: string) => ({
             value: size,
             label: `Whisper ${size.charAt(0).toUpperCase() + size.slice(1)}`,
           }));

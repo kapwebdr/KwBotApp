@@ -145,7 +145,6 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       try {
         await conversationService.deleteConversation(idOrTempKey);
       } catch (error) {
-        console.log('Erreur API lors de la suppression de la conversation:', error);
       }
     } catch (error) {
       console.error('Erreur lors de la suppression de la conversation:', error);

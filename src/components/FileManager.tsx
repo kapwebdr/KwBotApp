@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FileItem } from '../types/files';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
 import { useTool } from '../hooks/useTool';
+import { useBottomPadding } from '../hooks/useBottomPadding';
+import { Swipeable } from 'react-native-gesture-handler';
+import { BottomBar } from './BottomBar';
+import { FileManagerTool } from './FileManagerTool';
 
 export const FileManager: React.FC = () => {
   const { theme } = useTheme();
@@ -16,6 +20,7 @@ export const FileManager: React.FC = () => {
     updateToolConfig,
     loading: { isLoading }
   } = useTool();
+  const bottomPadding = useBottomPadding();
 
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -139,7 +144,27 @@ export const FileManager: React.FC = () => {
       </View>
     );
   };
-  // loadDirectory();
+
+  const handleDeleteFile = async (filePath: string) => {
+    try {
+      await executeToolAction('delete_file', {
+        filePath
+      });
+      loadDirectory();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
+  };
+
+  const renderRightActions = (filePath: string) => (
+    <TouchableOpacity
+      style={styles.deleteButton}
+      onPress={() => handleDeleteFile(filePath)}
+    >
+      <Ionicons name="trash" size={24} color="white" />
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.fileManagerContainer}>
       <View style={styles.fileManagerToolbar}>
@@ -192,6 +217,7 @@ export const FileManager: React.FC = () => {
       <View 
         style={[
           styles.fileListContainer,
+          { paddingBottom: bottomPadding },
           dragOver && styles.dragOver
         ]}
         onDragOver={Platform.OS === 'web' ? (e) => {
@@ -211,32 +237,37 @@ export const FileManager: React.FC = () => {
         ) : (
           <ScrollView contentContainerStyle={styles.fileList}>
             {files.map((file) => (
-              <TouchableOpacity
+              <Swipeable
                 key={file.path}
-                style={[
-                  styles.fileItem,
-                  selectedFiles.includes(file.path || '') && styles.fileItemSelected
-                ]}
-                onPress={() => handleFileClick(file)}
+                renderRightActions={() => renderRightActions(file.path)}
               >
-                <Ionicons
-                  name={file.type === 'directory' ? 'folder' : getFileIcon(file.name.split('.').pop())}
-                  size={24}
-                  color={theme.colors.text}
-                />
-                <View style={styles.fileDetails}>
-                  <Text style={styles.fileName}>{file.name}</Text>
-                  {file.type === 'file' && file.size !== null && (
-                    <Text style={styles.fileInfo}>
-                      {formatFileSize(file.size)} • {formatDate(file.modified)}
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.fileItem,
+                    selectedFiles.includes(file.path || '') && styles.fileItemSelected
+                  ]}
+                  onPress={() => handleFileClick(file)}
+                >
+                  <Ionicons
+                    name={file.type === 'directory' ? 'folder' : getFileIcon(file.name.split('.').pop())}
+                    size={24}
+                    color={theme.colors.text}
+                  />
+                  <View style={styles.fileDetails}>
+                    <Text style={styles.fileName}>{file.name}</Text>
+                    {file.type === 'file' && file.size !== null && (
+                      <Text style={styles.fileInfo}>
+                        {formatFileSize(file.size)} • {formatDate(file.modified)}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </Swipeable>
             ))}
           </ScrollView>
         )}
       </View>
+      <BottomBar ToolComponent={FileManagerTool} />
     </View>
   );
 };

@@ -6,6 +6,7 @@ import { LoadingBubble } from './LoadingBubble';
 import { createStyles } from '../styles/theme.styles';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTool } from '../hooks/useTool';
+import { useBottomPadding } from '../hooks/useBottomPadding';
 
 export const Messages: React.FC = () => {
   const { theme } = useTheme();
@@ -17,6 +18,7 @@ export const Messages: React.FC = () => {
     toolHeight
   } = useTool();
   const flatListRef = useRef<FlatList>(null);
+  const bottomPadding = useBottomPadding();
 
   const scrollToBottom = () => {
     if (flatListRef.current) {
@@ -56,8 +58,6 @@ export const Messages: React.FC = () => {
     return messageComponents;
   };
 
-  const bottomPadding = toolHeight + 80;
-
   return (
     <View style={[styles.messagesContainer, { paddingBottom: bottomPadding }]}>
       <FlatList
@@ -66,7 +66,6 @@ export const Messages: React.FC = () => {
         renderItem={({ item }) => item}
         keyExtractor={(_, index) => `message-${index}`}
         style={styles.messagesList}
-        // contentContainerStyle={{ flexGrow: 1 }}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         maintainVisibleContentPosition={{

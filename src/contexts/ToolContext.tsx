@@ -158,7 +158,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Sauvegarder le message utilisateur
       const newConversationId = await setMessageSave(userMessage, toolStates[currentTool]?.config);
-      setCurrentConversationId(newConversationId); // Ajouter cette ligne
+      setCurrentConversationId(newConversationId);
 
       setInput('');
       setToolStates(prev => ({
@@ -211,9 +211,10 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
 
         const assistantMessage = { role: 'assistant', content: result };
-        
+
         setMessages([...newMessages, assistantMessage]);
-        setMessageSave(assistantMessage, toolStates[currentTool]?.config);
+        console.log(newConversationId);
+        setMessageSave(assistantMessage, toolStates[currentTool]?.config,newConversationId);
       }
     } catch (error) {
       console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
@@ -375,4 +376,4 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </ToolContext.Provider>
   );
-}; 
+};

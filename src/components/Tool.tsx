@@ -12,14 +12,9 @@ export const Tool: React.FC = () => {
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;
-    console.log('Tool height:', height);
+    ('Tool height:', height);
     setToolHeight(height);
   }, [setToolHeight]);
-
-  useEffect(() => {
-    console.log('Tool component mounted');
-    return () => console.log('Tool component unmounted');
-  }, []);
 
   if (!tool) return null;
   const toolConfig = toolStates[tool.id]?.config;

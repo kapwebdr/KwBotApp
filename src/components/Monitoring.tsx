@@ -15,7 +15,6 @@ export const Monitoring: React.FC = () => {
 
   const fetchData = async () => {
     if (isFetching) {
-      console.log('Une requête est déjà en cours, ignorée');
       return;
     }
 
@@ -83,7 +82,7 @@ export const Monitoring: React.FC = () => {
         />
         {systemStats && (
           <Text style={[styles.statsText, { color: theme.colors.text }]}>
-            CPU: {systemStats && systemStats.cpu.percent ? systemStats.cpu.percent.toFixed(1) : '0'}% | 
+            CPU: {systemStats && systemStats.cpu && systemStats.cpu.percent ? systemStats.cpu.percent.toFixed(1) : '0'}% | 
             RAM: {systemStats && systemStats.memory && systemStats.memory.percent ? systemStats.memory.percent.toFixed(1) : '0'}% | 
             Disk: {systemStats && systemStats.disk && systemStats.disk.percent ? systemStats.disk.percent.toFixed(1) : '0'}%
           </Text>
@@ -115,19 +114,19 @@ export const Monitoring: React.FC = () => {
                   {container && container.stats && container.stats.memory_usage && formatBytes(container.stats.memory_usage)}
                 </Text>
                 <View style={styles.actions}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => handleContainerAction(container.id, 'start')}
                     style={styles.actionButton}
                   >
                     <Ionicons name="play" size={14} color={theme.colors.text} />
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => handleContainerAction(container.id, 'stop')}
                     style={styles.actionButton}
                   >
                     <Ionicons name="stop" size={14} color={theme.colors.text} />
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => handleContainerAction(container.id, 'restart')}
                     style={styles.actionButton}
                   >

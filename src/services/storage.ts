@@ -19,7 +19,6 @@ export class StorageService<T> {
         timestamp: Date.now(),
       };
       await AsyncStorage.setItem(this.key, JSON.stringify(item));
-      //console.log(`[Storage] Sauvegarde pour ${this.key}:`, data);
     } catch (error) {
       console.error(`[Storage] Erreur lors de la sauvegarde pour ${this.key}:`, error);
       throw error;
@@ -30,7 +29,6 @@ export class StorageService<T> {
     try {
       const storedData = await AsyncStorage.getItem(this.key);
       if (!storedData) {
-        //console.log(`[Storage] Aucune donnée pour ${this.key}, utilisation de la valeur par défaut`);
         return this.defaultValue;
       }
 
@@ -39,8 +37,7 @@ export class StorageService<T> {
         console.warn(`[Storage] Données invalides pour ${this.key}, utilisation de la valeur par défaut`);
         return this.defaultValue;
       }
-      
-      //console.log(`[Storage] Chargement pour ${this.key}:`, item.data);
+
       return item.data;
     } catch (error) {
       console.error(`[Storage] Erreur lors du chargement pour ${this.key}:`, error);
@@ -62,7 +59,6 @@ export class StorageService<T> {
   async clear(): Promise<void> {
     try {
       await AsyncStorage.removeItem(this.key);
-      //console.log(`[Storage] Suppression pour ${this.key}`);
     } catch (error) {
       console.error(`[Storage] Erreur lors de la suppression pour ${this.key}:`, error);
       throw error;

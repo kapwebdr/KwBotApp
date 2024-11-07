@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import Messages from './Messages';
 import { createStyles } from '../styles/theme.styles';
@@ -8,6 +8,8 @@ import { useConversation } from '../contexts/ConversationContext';
 import { TOOLS } from '../types/tools';
 import { FileManager } from './FileManager';
 import { LoadingBubble } from './LoadingBubble';
+import { Tool } from './Tool';
+import { BottomBar } from './BottomBar';
 
 export const ChatInterface: React.FC = () => {
   const { theme } = useTheme();
@@ -37,6 +39,7 @@ export const ChatInterface: React.FC = () => {
   return (
     <View style={styles.mainContent}>
       <Messages />
+      <BottomBar ToolComponent={Tool} />
     </View>
   );
 };
