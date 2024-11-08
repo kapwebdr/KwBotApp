@@ -15,6 +15,8 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
   currentPath,
   itemToMove,
   directoryOnly = false,
+  title,
+  confirmText = 'Déplacer ici',
 }) => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
@@ -37,6 +39,10 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
       loadDirectory();
     }
   }, [isVisible, loadDirectory]);
+
+  useEffect(() => {
+    setCurrentModalPath(currentPath);
+  }, [currentPath]);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -86,7 +92,13 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     );
   };
 
-  if (!itemToMove) return null;
+  const getModalTitle = () => {
+    if (title) return title;
+    if (!itemToMove) return 'Sélectionner un dossier';
+    return `Déplacer ${itemToMove.type === 'directory' ? 'le dossier' : 'le fichier'} "${itemToMove.name}"`;
+  };
+
+  if (!isVisible) return null;
 
   return (
     <Modal
@@ -99,7 +111,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
         <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-              Déplacer {itemToMove.type === 'directory' ? 'le dossier' : 'le fichier'} "{itemToMove.name}"
+              {getModalTitle()}
             </Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={theme.colors.text} />
@@ -167,7 +179,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
               onPress={() => onMove(currentModalPath)}
             >
               <Text style={[styles.modalButtonText, { color: theme.colors.background }]}>
-                Déplacer ici
+                {confirmText}
               </Text>
             </TouchableOpacity>
           </View>

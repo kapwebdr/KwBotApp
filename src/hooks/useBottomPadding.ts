@@ -1,6 +1,6 @@
 import { useTool } from './useTool';
 
 export const useBottomPadding = () => {
-  const { toolConfig } = useTool();
-  return (toolConfig?.height || 0) + 55;
-}; 
+  const { toolHeight } = useTool();
+  return ( toolHeight || 0) + 55;
+};

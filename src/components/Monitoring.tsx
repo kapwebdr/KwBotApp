@@ -7,6 +7,76 @@ import { SystemMetrics, Container } from '../types/systemMetrics';
 import { apiHandler } from '../services/apiHandler';
 import { createStyles } from '../styles/theme.styles';
 
+const styles = StyleSheet.create({
+  monitoringContainer: {
+    position: 'relative',
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  monitoringStatsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 4,
+    borderRadius: 4,
+    gap: 8,
+  },
+  monitoringIcon: {
+    marginRight: 4,
+  },
+  monitoringStatsText: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+  },
+  monitoringContainersDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 4,
+    borderRadius: 4,
+    padding: 4,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  monitoringContainerItem: {
+    marginVertical: 2,
+  },
+  monitoringContainerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  monitoringContainerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  monitoringStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  monitoringContainerName: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+  },
+  monitoringActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  monitoringActionButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+});
+
 export const Monitoring: React.FC = () => {
   const { theme } = useTheme();
   const { addNotification } = useNotification();
@@ -15,7 +85,7 @@ export const Monitoring: React.FC = () => {
   const [showContainers, setShowContainers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(false);
-  const styles = createStyles({ theme });
+
   const fetchData = async () => {
     if (isFetching) return;
 

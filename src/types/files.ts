@@ -54,7 +54,9 @@ export interface MoveFileModalProps {
   onMove: (destination: string) => void;
   currentPath: string;
   itemToMove: FileItem | null;
-  directoryOnly?: boolean;
+  directoryOnly?: boolean,
+  title?: string,
+  confirmText?: string;
 }
 
 // API Response Types

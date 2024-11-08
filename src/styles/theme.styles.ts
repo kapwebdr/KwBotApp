@@ -35,7 +35,6 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     ...createFileManagerStyles(theme),
     ...createNotificationsStyles(theme),
     ...createFilePreviewStyles(theme),
-    
   };
 };
 

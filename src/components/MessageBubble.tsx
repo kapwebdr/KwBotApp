@@ -7,9 +7,13 @@ import { createStyles } from '../styles/theme.styles';
 import * as FileSystem from 'expo-file-system';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { MoveFileModal } from './MoveFileModal';
+import { fileUploadService } from '../services/fileUploadService';
+import { notificationService } from '../services/notificationService';
 
 interface MessageBubbleProps {
   message: Message;
+  onSave: (content: string, isBase64Image: boolean, isBase64Audio: boolean) => void;
 }
 
 // Fonction utilitaire pour détecter le code dans le message
@@ -63,13 +67,28 @@ const renderTextWithCodeBlocks = (content: string, textStyle: any, styles: any) 
   );
 };
 
+const utf8ToBase64 = (str: string) => {
+  try {
+    // Convertir d'abord la chaîne en UTF-8
+    const bytes = new TextEncoder().encode(str);
+    // Convertir les bytes en chaîne base64
+    const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+    return btoa(binaryString);
+  } catch (error) {
+    console.error('Erreur lors de l\'encodage base64:', error);
+    throw error;
+  }
+};
+
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
-  message
+  message,
+  onSave
 }) => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
   const [isMessagePressed, setIsMessagePressed] = useState(false);
-  const [isButtonPressed, setIsButtonPressed] = useState<'copy' | 'download' | null>(null);
+  const [isButtonPressed, setIsButtonPressed] = useState<'copy' | 'download' | 'save' | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const isAI = message.role === 'assistant' || message.role === 'ai';
   const isBase64Image = /^data:image\/[a-zA-Z]+;base64,/.test(message.content);
@@ -139,6 +158,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  const handleSave = () => {
+    onSave(message.content, isBase64Image, isBase64Audio);
+  };
+
   const renderContent = () => {
     if (isBase64Image) {
       return (
@@ -173,51 +196,79 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <Pressable
-      onPressIn={() => setIsMessagePressed(true)}
-      onPressOut={() => setIsMessagePressed(false)}
-      style={[
-        styles.messageBubble,
-        isAI ? styles.aiBubble : styles.userBubble,
-      ]}
-    >
-      <View style={styles.messageContent}>
-        {renderContent()}
-        {isAI && (isMessagePressed || Platform.OS === 'web') && (
-          <View style={styles.messageActions}>
-            <TouchableOpacity 
-              onPressIn={() => setIsButtonPressed('copy')}
-              onPressOut={() => setIsButtonPressed(null)}
-              onPress={handleCopy}
-              style={[
-                styles.actionButton,
-                isButtonPressed === 'copy' && styles.actionButtonActive
-              ]}
-            >
-              <Ionicons 
-                name="copy-outline" 
-                size={16} 
-                style={isButtonPressed === 'copy' ? styles.actionIconActive : styles.actionIcon}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPressIn={() => setIsButtonPressed('download')}
-              onPressOut={() => setIsButtonPressed(null)}
-              onPress={handleDownload}
-              style={[
-                styles.actionButton,
-                isButtonPressed === 'download' && styles.actionButtonActive,
-              ]}
-            >
-              <Ionicons
-                name="download-outline"
-                size={16}
-                style={isButtonPressed === 'download' ? styles.actionIconActive : styles.actionIcon}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </Pressable>
+    <>
+      <Pressable
+        onPressIn={() => setIsMessagePressed(true)}
+        onPressOut={() => setIsMessagePressed(false)}
+        style={[
+          styles.messageBubble,
+          isAI ? styles.aiBubble : styles.userBubble,
+        ]}
+      >
+        <View style={styles.messageContent}>
+          {renderContent()}
+          {isAI && (isMessagePressed || Platform.OS === 'web') && (
+            <View style={styles.messageActions}>
+              <TouchableOpacity 
+                onPressIn={() => setIsButtonPressed('copy')}
+                onPressOut={() => setIsButtonPressed(null)}
+                onPress={handleCopy}
+                style={[
+                  styles.actionButton,
+                  isButtonPressed === 'copy' && styles.actionButtonActive
+                ]}
+              >
+                <Ionicons 
+                  name="copy-outline" 
+                  size={16} 
+                  style={isButtonPressed === 'copy' ? styles.actionIconActive : styles.actionIcon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPressIn={() => setIsButtonPressed('download')}
+                onPressOut={() => setIsButtonPressed(null)}
+                onPress={handleDownload}
+                style={[
+                  styles.actionButton,
+                  isButtonPressed === 'download' && styles.actionButtonActive,
+                ]}
+              >
+                <Ionicons
+                  name="download-outline"
+                  size={16}
+                  style={isButtonPressed === 'download' ? styles.actionIconActive : styles.actionIcon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPressIn={() => setIsButtonPressed('save')}
+                onPressOut={() => setIsButtonPressed(null)}
+                onPress={handleSave}
+                style={[
+                  styles.actionButton,
+                  isButtonPressed === 'save' && styles.actionButtonActive,
+                ]}
+              >
+                <Ionicons
+                  name="save-outline"
+                  size={16}
+                  style={isButtonPressed === 'save' ? styles.actionIconActive : styles.actionIcon}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Pressable>
+
+      <MoveFileModal
+        isVisible={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onMove={handleSave}
+        currentPath="/"
+        itemToMove={null}
+        directoryOnly={true}
+        title="Sauvegarder le fichier"
+        confirmText="Sauvegarder ici"
+      />
+    </>
   );
 };

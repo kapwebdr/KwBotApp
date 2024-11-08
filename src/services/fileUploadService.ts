@@ -12,6 +12,12 @@ interface RenameResponse {
   timestamp: string;
 }
 
+interface UploadBase64Params {
+  content: string;
+  path: string;
+  mime_type: string;
+}
+
 class FileUploadService {
   private baseUrl: string;
 
@@ -285,6 +291,25 @@ class FileUploadService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       notificationService.notify('error', `Erreur lors du renommage: ${errorMessage}`);
+      return false;
+    }
+  }
+
+  async uploadBase64File(params: UploadBase64Params): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/files/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params)
+      });
+
+      const result = await this.handleResponse<UploadResult>(response);
+      return result.uploads.every(upload => upload.status === 'success');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      notificationService.notify('error', `Erreur lors de l'upload: ${errorMessage}`);
       return false;
     }
   }
