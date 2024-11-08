@@ -1,30 +1,80 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { createStyles } from '../styles/theme.styles';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ConfirmationModalProps {
   isVisible: boolean;
+  title?: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
   onConfirm: () => void;
   onCancel: () => void;
-  message: string;
+  type?: 'danger' | 'warning' | 'info';
+  icon?: string;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConfirm, onCancel, message }) => {
-  const theme = useTheme();
+export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  isVisible,
+  title,
+  message,
+  confirmText = 'Confirmer',
+  cancelText = 'Annuler',
+  onConfirm,
+  onCancel,
+  type = 'danger',
+  icon,
+}) => {
+  const { theme } = useTheme();
+  const styles = createStyles({ theme });
 
-  if (!isVisible) return null;
+  const getTypeColor = () => {
+    switch (type) {
+      case 'danger':
+        return theme.colors.error;
+      case 'warning':
+        return theme.colors.gray400;
+      case 'info':
+        return theme.colors.primary;
+      default:
+        return theme.colors.primary;
+    }
+  };
 
   return (
-    <Modal transparent={true} animationType="fade">
+    <Modal
+      visible={isVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+          {icon && (
+            <View style={[styles.modalIcon, { backgroundColor: `${getTypeColor()}20` }]}>
+              <Ionicons name={icon as any} size={24} color={getTypeColor()} />
+            </View>
+          )}
+          {title && <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{title}</Text>}
           <Text style={[styles.modalText, { color: theme.colors.text }]}>{message}</Text>
           <View style={styles.modalButtons}>
-            <TouchableOpacity onPress={onCancel} style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.modalButtonText}>Annuler</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: theme.colors.gray100 }]}
+              onPress={onCancel}
+            >
+              <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>
+                {cancelText}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onConfirm} style={[styles.modalButton, styles.modalButtonDanger]}>
-              <Text style={styles.modalButtonText}>Supprimer</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: getTypeColor() }]}
+              onPress={onConfirm}
+            >
+              <Text style={[styles.modalButtonText, { color: theme.colors.background }]}>
+                {confirmText}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -32,44 +82,5 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConf
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '80%',
-    maxWidth: 300,
-  },
-  modalText: {
-    fontSize: 18,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  modalButton: {
-    padding: 10,
-    borderRadius: 5,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  modalButtonDanger: {
-    backgroundColor: 'red',
-  },
-  modalButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-});
 
 export default ConfirmationModal;

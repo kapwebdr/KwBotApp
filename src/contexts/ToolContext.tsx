@@ -101,6 +101,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearPendingFiles = () => {
+    console.log('clearPendingFiles');
     setToolStates(prev => ({
       ...prev,
       [currentTool]: {
@@ -155,9 +156,9 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Mettre à jour l'affichage avec le message utilisateur
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
-
+      console.log(toolAction.isMedia?.request);
       // Sauvegarder le message utilisateur
-      const newConversationId = await setMessageSave(userMessage, toolStates[currentTool]?.config);
+      const newConversationId = await setMessageSave(userMessage, toolStates[currentTool]?.config,undefined,toolAction.isMedia?.request);
       setCurrentConversationId(newConversationId);
 
       setInput('');
@@ -171,11 +172,9 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const params = {
         ...toolStates[currentTool]?.config,
         input: toolStates[currentTool]?.input,
-        messages: newMessages,
         conversationId: newConversationId,
         ...args[0],
       };
-
       if (toolAction.api.streaming) {
         let streamContent = '';
         await apiHandler.executeApiAction(
@@ -188,7 +187,11 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
               streamContent += chunk;
               setMessages([
                 ...newMessages,
-                { role: 'assistant', content: streamContent }
+                { 
+                  role: 'assistant', 
+                  content: streamContent,
+                  isMedia: toolAction.isMedia?.response
+                }
               ]);
             }
           },
@@ -198,7 +201,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
               loading.stopLoading();
               const assistantMessage = { role: 'assistant', content: response };
               setMessages([...newMessages, assistantMessage]);
-              await setMessageSave(assistantMessage, toolStates[currentTool]?.config,params['conversationId']);
+              await setMessageSave(assistantMessage, toolStates[currentTool]?.config,params['conversationId'],toolAction.isMedia?.response);
             }
           }
         );
@@ -209,12 +212,21 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
           params,
           loading.updateProgress
         );
-
-        const assistantMessage = { role: 'assistant', content: result };
+        
+        const assistantMessage = { 
+          role: 'assistant', 
+          content: result,
+          isMedia: toolAction.isMedia?.response 
+        };
 
         setMessages([...newMessages, assistantMessage]);
         console.log(newConversationId);
-        setMessageSave(assistantMessage, toolStates[currentTool]?.config,newConversationId);
+        setMessageSave(
+          assistantMessage, 
+          toolStates[currentTool]?.config,
+          newConversationId,
+          toolAction.isMedia?.response
+        );
       }
     } catch (error) {
       console.error(toolAction.errorMessages?.apiError || 'Erreur lors de l\'action:', error);
@@ -319,7 +331,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
         [currentTool]: {
           ...prev[currentTool],
           errors: {}
-        }
+        },
       }));
       if (toolAction.api.streaming) {
         let streamContent = '';

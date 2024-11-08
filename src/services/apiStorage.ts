@@ -1,12 +1,12 @@
 import { apiHandler } from './apiHandler';
-import { 
-  Conversation, 
-  Message, 
-  HistoryResponse, 
-  SaveResponse, 
-  ConversationsResponse, 
-  SaveMessageParams, 
-  DeleteResponse 
+import {
+  Conversation,
+  Message,
+  HistoryResponse,
+  SaveResponse,
+  ConversationsResponse,
+  SaveMessageParams,
+  DeleteResponse,
 } from '../types/conversations';
 import { sessionStorage } from './storage';
 import { notificationService } from './notificationService';
@@ -72,7 +72,8 @@ export class ConversationApiStorage extends ApiStorageService<Conversation[]> {
 
       const messages = response.messages.map(msg => ({
         role: msg.role as Message['role'],
-        content: msg.message
+        content: msg.message,
+        metadata: msg.metadata,
       }));
 
       return {
@@ -114,7 +115,7 @@ export class ConversationApiStorage extends ApiStorageService<Conversation[]> {
     }
   }
 
-  async save({ conversationId, message, toolId, toolConfig }: SaveMessageParams): Promise<SaveResponse | null> {
+  async save({ conversationId, message, toolId, toolConfig, isMedia }: SaveMessageParams): Promise<SaveResponse | null> {
     try {
       const response = await this.executeRequest<SaveResponse>(
         'POST',
@@ -126,11 +127,11 @@ export class ConversationApiStorage extends ApiStorageService<Conversation[]> {
                 message.role,
           message: message.content,
           metadata: {
-            timestamp: new Date().toISOString(),
             tool: {
               name: toolId,
               parameters: toolConfig || {}
-            }
+            },
+            isMedia
           }
         }
       );

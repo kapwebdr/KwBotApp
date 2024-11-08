@@ -45,6 +45,12 @@ export interface Theme {
     gray950: string;
     gray1000: string;
     error: string;
+    info: string;
+    success: string;
+    warning: string;
+    codeBackground: string;
+    codeBorder: string;
+    codeText: string;
   };
   fontSizes: {
     small: number;

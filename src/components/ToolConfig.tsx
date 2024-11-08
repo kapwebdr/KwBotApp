@@ -54,22 +54,36 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
   const hasUrlInput = !!tool.features?.urlInput;
 
   const handleSend = async () => {
-    if (isLoading) {
-      return; // Désactive l'envoi si aucune conversation n'est chargée
-    }
+    if (isLoading) return;
 
     if (pendingFiles && pendingFiles.length > 0) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string;
-        await handleToolAction('upload', {
-          base64,
-          name: pendingFiles[0].name,
-          type: pendingFiles[0].file.type
+      const processFiles = pendingFiles.map(async (pendingFile) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const base64 = e.target?.result as string;
+              await handleToolAction('upload', {
+                base64,
+                name: pendingFile.name,
+                type: pendingFile.file.type,
+              });
+              resolve(true);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(pendingFile.file);
         });
+      });
+
+      try {
+        await Promise.all(processFiles);
         clearPendingFiles();
-      };
-      reader.readAsDataURL(pendingFiles[0].file);
+      } catch (error) {
+        console.error('Erreur lors du traitement des fichiers:', error);
+      }
     } else if (input.trim()) {
       handleToolAction('send');
     }
@@ -297,18 +311,17 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
     }
   };
 
-  const handleFileSelect = (file: File) => {
-    addPendingFile({ name: file.name, file });
+  const handleFileSelect = (files: File[]) => {
+    files.forEach(file => {
+      addPendingFile({ name: file.name, file });
+    });
   };
 
   if (!tool.configFields && !hasPromptInput && !hasFileUpload && !hasUrlInput) {
     return null;
   }
-
   return (
     <View style={[styles.toolConfigContainer, { backgroundColor: theme.colors.background }]}>
-      
-      
       <View style={styles.toolConfigContent}>
         {tool.configFields && tool.configFields.length > 0 && (
           <View style={styles.configFields}>
@@ -323,6 +336,7 @@ export const ToolConfigComponent: React.FC<ToolConfigComponentProps> = ({
               onFileSelect={handleFileSelect}
               pendingFiles={pendingFiles}
               onClearFiles={clearPendingFiles}
+              onClearFile={clearPendingFiles}
             />
             {hasPromptInput && (
               <>

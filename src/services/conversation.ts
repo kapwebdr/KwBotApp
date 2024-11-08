@@ -8,7 +8,13 @@ export const conversationService = {
       const response = await conversationsApiStorage.loadConversation(conversationId);
       if (response) {
         notificationService.notify('success', 'Conversation chargée', false);
-        return response.messages;
+        return response.messages.map(msg => ({
+          role: msg.role === 'user' ? 'human' : 
+                msg.role === 'assistant' ? 'ai' : 
+                msg.role,
+          content: msg.content,
+          isMedia: msg.metadata?.isMedia
+        }));
       }
       return [];
     } catch (error) {
@@ -92,7 +98,8 @@ export const conversationService = {
     conversations: Conversation[],
     conversationId: string,
     messages: Message[],
-    toolId: string
+    toolId: string,
+    isMedia?: boolean
   ): Promise<Conversation[]> {
     if (!Array.isArray(conversations)) {
       console.error('updateConversation: conversations doit être un tableau');
@@ -106,8 +113,13 @@ export const conversationService = {
         timestamp: Date.now()
       };
 
-      // Mettre à jour dans l'API avec le toolId
-      await conversationsApiStorage.save(updatedConversation, toolId);
+      // Mettre à jour dans l'API avec le toolId et isMedia
+      await conversationsApiStorage.save({
+        conversationId,
+        messages: messages[messages.length - 1],
+        toolId,
+        isMedia
+      });
 
       // Mettre à jour le tableau local
       const updatedConversations = conversations.map(conv =>
@@ -125,14 +137,16 @@ export const conversationService = {
     conversationId: string | undefined,
     message: Message,
     toolId: string,
-    toolConfig?: any
+    toolConfig?: any,
+    isMedia?: boolean
   ): Promise<string> {
     try {
       const response = await conversationsApiStorage.save({
         conversationId,
         message,
         toolId,
-        toolConfig
+        toolConfig,
+        isMedia
       });
       return response.id;
     } catch (error) {
@@ -148,5 +162,5 @@ export const conversationService = {
       console.error('Erreur lors de la suppression de la conversation:', error);
       throw error;
     }
-  }
-}; 
+  },
+};

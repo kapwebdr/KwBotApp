@@ -19,7 +19,6 @@ export const Messages: React.FC = () => {
   } = useTool();
   const flatListRef = useRef<FlatList>(null);
   const bottomPadding = useBottomPadding();
-
   const scrollToBottom = () => {
     if (flatListRef.current) {
       try {

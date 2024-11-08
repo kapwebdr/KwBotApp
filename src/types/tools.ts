@@ -59,6 +59,9 @@ export interface ToolConfigField {
 
 export interface ToolContextType {
   currentTool: ToolType;
+  toolStates: Record<ToolType, ToolState>;
+  addPendingFile: (files: File[]) => void;
+  clearPendingFiles: () => void;
   setCurrentTool: (tool: ToolType) => void;
   toolConfig: ToolConfig;
   updateToolConfig: (config: Partial<ToolConfig>) => void;
@@ -87,6 +90,10 @@ export interface ToolAction {
   requiresModelLoaded?: boolean;
   generatingTxt?: string;
   generatingProgress?: number;
+  isMedia?: {
+    request: boolean;
+    response: boolean;
+  };
   errorMessages?: {
     noFile?: string;
     noInput?: string;
@@ -174,7 +181,6 @@ export const TOOLS: Tool[] = [
               system: params.system,
               prompt: params.input,
               stream: true,
-              messages: params.messages,
               format_type: 'encoded',
           }),
           streamProcessor: (chunk: any) => {
@@ -402,6 +408,10 @@ export const TOOLS: Tool[] = [
           noFile: 'Veuillez sélectionner une image',
           apiError: 'Erreur lors de l\'extraction du texte',
         },
+        isMedia: {
+          request: true,
+          response: false,
+        },
         api: {
           path: '/ai/image/ocr',
           method: 'POST',
@@ -496,7 +506,7 @@ export const TOOLS: Tool[] = [
     },
     configFields: [
       {
-        name: 'fromLang',
+        name: 'from_lang',
         type: 'select',
         label: 'De',
         defaultValue: 'fr',
@@ -508,7 +518,7 @@ export const TOOLS: Tool[] = [
         ],
       },
       {
-        name: 'toLang',
+        name: 'to_lang',
         type: 'select',
         label: 'Vers',
         defaultValue: 'en',
@@ -539,8 +549,8 @@ export const TOOLS: Tool[] = [
           requestTransform: (params) => ({
               stream: true,
               text: params.input,
-              from_lang: params.fromLang || 'fr',
-              to_lang: params.toLang || 'en',
+              from_lang: params.from_lang || 'fr',
+              to_lang: params.to_lang || 'en',
           }),
           streamProcessor: () => {
             return null;
@@ -607,8 +617,12 @@ export const TOOLS: Tool[] = [
         requiresInput: true,
         generatingTxt: 'Génération audio en cours...',
         generatingProgress: 0,
+        isMedia: {
+          request: false,
+          response: true,
+        },
         errorMessages: {
-          noInput: 'Veuillez entrer un texte à convertir',
+          noInput: 'Veuillez entrer un texte �� convertir',
           generating: 'Une génération est déjà en cours',
           apiError: 'Erreur lors de la génération audio',
         },
@@ -691,6 +705,10 @@ export const TOOLS: Tool[] = [
         errorMessages: {
           noFile: 'Veuillez sélectionner un fichier audio',
           apiError: 'Erreur lors de la transcription',
+        },
+        isMedia: {
+          request: true,
+          response: false,
         },
         api: {
           path: '/ai/speech/speech-to-text',
@@ -870,16 +888,6 @@ export const TOOLS: Tool[] = [
           path: '/files/upload',
           method: 'POST',
           responseType: 'json',
-          requestTransform: (params) => {
-            const formData = new FormData();
-            if (params.files) {
-              params.files.forEach((file: File) => {
-                formData.append('files', file);
-              });
-            }
-            formData.append('path', params.currentPath || '/');
-            return formData;
-          },
         },
       },
       {

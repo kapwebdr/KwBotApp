@@ -10,6 +10,7 @@ import { FileManager } from './FileManager';
 import { LoadingBubble } from './LoadingBubble';
 import { Tool } from './Tool';
 import { BottomBar } from './BottomBar';
+import { FileManagerProvider } from '../contexts/FileManagerContext';
 
 export const ChatInterface: React.FC = () => {
   const { theme } = useTheme();
@@ -31,7 +32,9 @@ export const ChatInterface: React.FC = () => {
   if (tool?.customComponent) {
     return (
       <View style={styles.mainContent}>
-        <FileManager />
+        <FileManagerProvider>
+          <FileManager />
+        </FileManagerProvider>
       </View>
     );
   }

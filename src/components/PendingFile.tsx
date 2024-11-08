@@ -16,6 +16,12 @@ export const PendingFile: React.FC<PendingFileProps> = ({
   const { theme } = useTheme();
   const styles = createStyles({ theme });
 
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClear();
+  };
+
   return (
     <View style={[
       styles.pendingFileContainer,
@@ -33,7 +39,8 @@ export const PendingFile: React.FC<PendingFileProps> = ({
       </Text>
       <TouchableOpacity 
         style={styles.clearFileButton}
-        onPress={onClear}
+        onPress={handleClear}
+        activeOpacity={0.7}
       >
         <Ionicons 
           name="close-circle" 

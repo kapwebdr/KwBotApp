@@ -1,64 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { createStyles } from '../styles/theme.styles';
 import { useTool } from '../hooks/useTool';
+import { useFileManager } from '../contexts/FileManagerContext';
 import FileUploadConfig from './FileUploadConfig';
-import { PendingFile } from './PendingFile';
+import { LoadingBubble } from './LoadingBubble';
 
 export const FileManagerTool: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
-  const { tool, executeToolAction } = useTool();
-  const [pendingFiles, setPendingFiles] = useState<{ name: string; file: File }[]>([]);
-
-  const handleFileSelect = (file: File) => {
-    setPendingFiles(prev => [...prev, { name: file.name, file }]);
-  };
-
-  const handleClearFiles = () => {
-    setPendingFiles([]);
-  };
-
-  const handleClearFile = (index: number) => {
-    setPendingFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  const { tool } = useTool();
+  const { 
+    pendingFiles,
+    isUploading,
+    handleFileSelect,
+    handleUpload,
+    clearPendingFiles,
+    handleClearFile,
+    compressionProgress,
+  } = useFileManager();
 
   const handleUploadPendingFiles = async () => {
-    if (pendingFiles.length === 0) return;
-    
-    try {
-      await executeToolAction('upload', {
-        files: pendingFiles.map(pf => pf.file),
-        currentPath: tool?.config?.currentPath || '/'
-      });
-      setPendingFiles([]);
-    } catch (error) {
-      console.error('Erreur lors du téléchargement:', error);
-    }
+    const files = pendingFiles.map(pf => pf.file);
+    await handleUpload(files);
   };
-
-  if (!tool) return null;
 
   return (
     <View style={styles.fileManagerToolContainer}>
-      <View style={styles.pendingFilesContainer}>
-        {pendingFiles.map((file, index) => (
-          <PendingFile
-            key={index}
-            fileName={file.name}
-            onClear={() => handleClearFile(index)}
-          />
-        ))}
-      </View>
-      
       <View style={styles.uploadControls}>
         <FileUploadConfig
           tool={{
             ...tool,
             features: {
-              ...tool.features,
+              ...tool?.features,
               fileUpload: {
                 accept: ['*/*'],
                 multiple: true,
@@ -68,21 +44,37 @@ export const FileManagerTool: React.FC = () => {
           }}
           onFileSelect={handleFileSelect}
           pendingFiles={pendingFiles}
-          onClearFiles={handleClearFiles}
+          onClearFiles={clearPendingFiles}
+          onClearFile={handleClearFile}
         />
         
         {pendingFiles.length > 0 && (
           <TouchableOpacity
-            style={styles.uploadButton}
+            style={[
+              styles.uploadActionButton,
+              isUploading && styles.uploadActionButtonDisabled
+            ]}
             onPress={handleUploadPendingFiles}
+            disabled={isUploading}
           >
-            <Ionicons name="cloud-upload" size={24} color={theme.colors.primary} />
-            <Text style={styles.uploadButtonText}>
-              Uploader ({pendingFiles.length} fichiers)
+            <Ionicons 
+              name="cloud-upload-outline" 
+              size={24} 
+              color={theme.colors.text} 
+            />
+            <Text style={styles.uploadActionButtonText}>
+              {isUploading ? 'Upload en cours...' : `Uploader (${pendingFiles.length})`}
             </Text>
           </TouchableOpacity>
         )}
       </View>
+
+      {compressionProgress && (
+        <LoadingBubble
+          progress={compressionProgress.progress}
+          message={`Compression en cours: ${compressionProgress.file}`}
+        />
+      )}
     </View>
   );
-}; 
+};

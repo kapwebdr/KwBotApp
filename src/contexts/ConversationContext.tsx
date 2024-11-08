@@ -21,7 +21,12 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [currentToolId, setCurrentToolId] = useState<ToolType>('llm');
   const [isLoading, setIsLoading] = useState(false);
 
-  const setMessageSave = async (message: Message, toolConfig?: any, conversationId?: string) => {
+  const setMessageSave = async (
+    message: Message, 
+    toolConfig?: any, 
+    conversationId?: string,
+    isMedia?: boolean
+  ) => {
     let currentId = currentConversationId;
     try {
       if (conversationId) {
@@ -29,12 +34,13 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setCurrentConversationId(conversationId);
       }
 
-      const apiId = currentId === ''? undefined : currentId;
+      const apiId = currentId === '' ? undefined : currentId;
       const newId = await conversationService.updateMessage(
         apiId,
         message,
         currentToolId,
-        toolConfig
+        toolConfig,
+        isMedia
       );
 
       if (!apiId) {

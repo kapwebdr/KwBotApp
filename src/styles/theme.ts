@@ -261,4 +261,4 @@ export const getTheme = async (): Promise<ThemeType> => {
 
 export const saveTheme = async (themeType: ThemeType): Promise<void> => {
   await themeStorage.save(themeType);
-}; 
+};

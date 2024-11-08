@@ -2,6 +2,7 @@ import { ToolType } from './tools';
 export interface Message {
     role: string;
     content: any;
+    isMedia?: boolean;
   }
   
   export interface Conversation {
@@ -20,6 +21,7 @@ export interface Message {
       temperature?: number;
       parameters?: object;
       timestamp?: string;
+      isMedia?: boolean;
       tool?: {
         name: string;
         parameters: object;
@@ -52,6 +54,7 @@ export interface Message {
     message: Message;
     toolId: string;
     toolConfig?: any;
+    isMedia?: boolean;
   }
   
   export interface DeleteResponse {
@@ -63,7 +66,7 @@ export interface Message {
 export interface ConversationContextType {
   messages: Message[];
   setMessages: (messages: Message[]) => void;
-  setMessageSave: (message: Message, toolConfig?: any,conversationId?:string) => string;
+  setMessageSave: (message: Message, toolConfig?: any,conversationId?:string,isMedia?:boolean) => string;
   conversations: Conversation[];
   currentConversationId: string | null;
   systemMessage: string;

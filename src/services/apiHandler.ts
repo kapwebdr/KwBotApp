@@ -158,14 +158,6 @@ class ApiHandler {
             for (const line of lines) {
                 if (line.startsWith('data: ')) {
                     const chunk = line.slice(6);
-
-                    // if (chunk.trim() === '[DONE]') {
-                    //     if (textBuffer && onChunk) {
-                    //         onChunk(textBuffer, params);
-                    //     }
-                    //     return true;
-                    // }
-
                     try {
                         // Essayer de parser en JSON
                         const data = JSON.parse(chunk);
