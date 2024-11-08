@@ -4,6 +4,14 @@ import { UploadResult, ListDirectoryResponse, ApiResponse,
   CompressParams,DecompressParams, 
   DecompressResponse, MoveResponse,PreviewResponse  } from '../types/files';
 
+interface RenameResponse {
+  status: string;
+  message: string;
+  old_path: string;
+  new_path: string;
+  timestamp: string;
+}
+
 class FileUploadService {
   private baseUrl: string;
 
@@ -255,6 +263,29 @@ class FileUploadService {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       notificationService.notify('error', `Erreur lors de la prévisualisation: ${errorMessage}`);
       throw error;
+    }
+  }
+
+  async renameFile(path: string, newName: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/files/rename`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path, new_name: newName })
+      });
+
+      const result = await this.handleResponse<RenameResponse>(response);
+      if (result.status === 'success') {
+        notificationService.notify('success', result.message);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      notificationService.notify('error', `Erreur lors du renommage: ${errorMessage}`);
+      return false;
     }
   }
 }

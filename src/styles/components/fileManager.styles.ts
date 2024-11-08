@@ -162,4 +162,7 @@ export const createFileManagerStyles = (theme: Theme) => ({
       fileItemActionPreview: {
         backgroundColor: theme.colors.info,
       },
+      fileItemActionRename: {
+        backgroundColor: theme.colors.warning,
+      },
 }); 

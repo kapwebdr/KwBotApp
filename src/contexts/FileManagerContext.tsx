@@ -212,6 +212,24 @@ export const FileManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  const handleRenameFile = async (path: string, newName: string): Promise<boolean> => {
+    try {
+      if (newName.includes('/') || newName.includes('\\')) {
+        notificationService.notify('error', 'Le nom ne peut pas contenir de séparateurs (/ ou \\)');
+        return false;
+      }
+
+      const success = await fileUploadService.renameFile(path, newName);
+      if (success) {
+        await loadDirectory();
+      }
+      return success;
+    } catch (error) {
+      console.error('Erreur lors du renommage:', error);
+      return false;
+    }
+  };
+
   React.useEffect(() => {
     loadDirectory();
   }, [currentPath, loadDirectory]);
@@ -237,6 +255,7 @@ export const FileManagerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     handleDecompressFile,
     compressionProgress,
     handleMoveFiles,
+    handleRenameFile,
   };
 
   return (

@@ -29,6 +29,7 @@ export const FileManager: React.FC = () => {
     handleCompressFile,
     handleDecompressFile,
     handleMoveFiles,
+    handleRenameFile,
   } = useFileManager();
 
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
@@ -39,6 +40,9 @@ export const FileManager: React.FC = () => {
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
   const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [fileToRename, setFileToRename] = useState<FileItem | null>(null);
+  const [showRenameInput, setShowRenameInput] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
 
   const handleCreateFolderSubmit = async () => {
     if (!newFolderName.trim()) return;
@@ -76,6 +80,23 @@ export const FileManager: React.FC = () => {
   const initiateDelete = (file: FileItem) => {
     setFileToDelete(file);
     setDeleteModalVisible(true);
+  };
+
+  const initiateRename = (file: FileItem) => {
+    setFileToRename(file);
+    setNewFileName(file.name);
+    setShowRenameInput(true);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!fileToRename?.path || !newFileName.trim()) return;
+
+    const success = await handleRenameFile(fileToRename.path, newFileName.trim());
+    if (success) {
+      setShowRenameInput(false);
+      setFileToRename(null);
+      setNewFileName('');
+    }
   };
 
   const renderFileActions = (file: FileItem) => {
@@ -147,6 +168,16 @@ export const FileManager: React.FC = () => {
       }
     }
 
+    actions.push(
+      <TouchableOpacity
+        key="rename"
+        style={[styles.fileItemAction, styles.fileItemActionRename]}
+        onPress={() => initiateRename(file)}
+      >
+        <Ionicons name="pencil" size={24} style={styles.actionIcon} />
+      </TouchableOpacity>
+    );
+
     return (
       <View style={styles.fileItemActions}>
         {actions}
@@ -207,6 +238,34 @@ export const FileManager: React.FC = () => {
             onPress={() => {
               setNewFolderName('');
               setShowNewFolderInput(false);
+            }}
+          >
+            <Ionicons name="close" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showRenameInput && fileToRename && (
+        <View style={styles.newFolderInput}>
+          <TextInput
+            value={newFileName}
+            onChangeText={setNewFileName}
+            placeholder="Nouveau nom"
+            style={styles.input}
+            autoFocus
+          />
+          <TouchableOpacity
+            style={styles.inputButton}
+            onPress={handleRenameSubmit}
+          >
+            <Ionicons name="checkmark" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.inputButton}
+            onPress={() => {
+              setShowRenameInput(false);
+              setFileToRename(null);
+              setNewFileName('');
             }}
           >
             <Ionicons name="close" size={20} color={theme.colors.text} />
