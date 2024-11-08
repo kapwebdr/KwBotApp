@@ -622,7 +622,7 @@ export const TOOLS: Tool[] = [
           response: true,
         },
         errorMessages: {
-          noInput: 'Veuillez entrer un texte �� convertir',
+          noInput: 'Veuillez entrer un texte  convertir',
           generating: 'Une génération est déjà en cours',
           apiError: 'Erreur lors de la génération audio',
         },
@@ -937,6 +937,41 @@ export const TOOLS: Tool[] = [
             source: params.sourcePath,
             destination: params.destinationPath,
           }),
+        },
+      },
+    ],
+  },
+  {
+    id: 'system_monitor',
+    label: 'Monitoring Système',
+    icon: 'analytics',
+    customComponent: 'SystemMonitor',
+    actions: [
+      {
+        type: 'systemStats',
+        handler: 'handleSystemStats',
+        api: {
+          path: '/monitor/system/stats',
+          method: 'GET',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'containersList',
+        handler: 'handleContainersList',
+        api: {
+          path: '/monitor/containers',
+          method: 'GET',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'execute',
+        handler: 'handleContainerAction',
+        api: {
+          path: '/monitor/containers/{containerId}/{action}',
+          method: 'POST',
+          responseType: 'json',
         },
       },
     ],

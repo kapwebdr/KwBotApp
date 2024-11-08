@@ -9,13 +9,14 @@ import { createMessagesStyles } from './components/messages.styles';
 import { createToolConfigStyles } from './components/toolconfig.styles';
 import { createPendingFilesStyles } from './components/pendingfiles.styles';
 import { createBottomBarStyles } from './components/bottombar.styles';
-import { createSystemStatusStyles } from './components/systemstatus';
 import { createFormInputStyles } from './components/forminput.styles';
 import { createTopBarStyles } from './components/topbar.styles';
 import { createProgressBubbleStyles } from './components/progressbubble.styles';
 import { createFileManagerStyles } from './components/fileManager.styles';
 import { createNotificationsStyles } from './components/notifications.styles';
 import { createFilePreviewStyles } from './components/filePreview.styles';
+import { createSystemMonitorStyles } from './components/systemMonitor.styles';
+
 export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
 
@@ -28,13 +29,13 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     ...createToolConfigStyles(theme),
     ...createPendingFilesStyles(theme),
     ...createBottomBarStyles(theme),
-    ...createSystemStatusStyles(theme),
     ...createFormInputStyles(theme),
     ...createTopBarStyles(theme),
     ...createProgressBubbleStyles(theme),
     ...createFileManagerStyles(theme),
     ...createNotificationsStyles(theme),
     ...createFilePreviewStyles(theme),
+    ...createSystemMonitorStyles(theme),
   };
 };
 

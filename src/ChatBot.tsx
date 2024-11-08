@@ -6,7 +6,6 @@ import ErrorModal from './components/ErrorModal';
 import { createStyles } from './styles/theme.styles';
 import { Sidebar } from './components/Sidebar';
 import { useTheme } from './contexts/ThemeContext';
-import { Monitoring } from './components/Monitoring';
 import { ThemeSelector } from './components/ThemeSelector';
 import { ChatInterface } from './components/ChatInterface';
 import { useNotification } from './hooks/useNotification';
@@ -85,8 +84,6 @@ const ChatBot: React.FC = () => {
           <TouchableOpacity onPress={toggleSidebar}>
             <Ionicons name="menu" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
-
-          <Monitoring />
 
           <ThemeSelector />
         </View>

@@ -35,7 +35,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       case 'danger':
         return theme.colors.error;
       case 'warning':
-        return theme.colors.gray400;
+        return theme.colors.warning;
       case 'info':
         return theme.colors.primary;
       default:
@@ -51,28 +51,43 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       onRequestClose={onCancel}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
-          {icon && (
-            <View style={[styles.modalIcon, { backgroundColor: `${getTypeColor()}20` }]}>
-              <Ionicons name={icon as any} size={24} color={getTypeColor()} />
-            </View>
-          )}
-          {title && <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{title}</Text>}
-          <Text style={[styles.modalText, { color: theme.colors.text }]}>{message}</Text>
-          <View style={styles.modalButtons}>
+        <View style={[styles.modalConfirmContent, { backgroundColor: theme.colors.background }]}>
+          <View style={styles.modalIconContainer}>
+            {icon && (
+              <View style={[styles.modalIcon, { backgroundColor: `${getTypeColor()}20` }]}>
+                <Ionicons name={icon as any} size={24} color={getTypeColor()} />
+              </View>
+            )}
+            {title && (
+              <Text style={[styles.modalConfirmTitle, { color: theme.colors.text }]}>
+                {title}
+              </Text>
+            )}
+          </View>
+
+          <Text style={[styles.modalConfirmText, { color: theme.colors.text }]}>
+            {message}
+          </Text>
+
+          <View style={styles.modalConfirmActions}>
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: theme.colors.gray100 }]}
+              style={[styles.modalConfirmButton, styles.modalConfirmCancel]}
               onPress={onCancel}
             >
-              <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>
+              <Text style={[styles.modalConfirmButtonText, { color: theme.colors.text }]}>
                 {cancelText}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: getTypeColor() }]}
+              style={[
+                styles.modalConfirmButton,
+                type === 'danger' && styles.modalConfirmDanger,
+                type === 'warning' && styles.modalConfirmWarning,
+                type === 'info' && styles.modalConfirmInfo,
+              ]}
               onPress={onConfirm}
             >
-              <Text style={[styles.modalButtonText, { color: theme.colors.background }]}>
+              <Text style={[styles.modalConfirmButtonText, { color: theme.colors.background }]}>
                 {confirmText}
               </Text>
             </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { View } from 'react-native';
 import Messages from './Messages';
 import { createStyles } from '../styles/theme.styles';
@@ -6,11 +6,45 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useTool } from '../hooks/useTool';
 import { useConversation } from '../contexts/ConversationContext';
 import { TOOLS } from '../types/tools';
-import { FileManager } from './FileManager';
 import { LoadingBubble } from './LoadingBubble';
 import { Tool } from './Tool';
 import { BottomBar } from './BottomBar';
 import { FileManagerProvider } from '../contexts/FileManagerContext';
+
+// Mapping des composants personnalisés
+const CustomComponents = {
+  FileManager: lazy(() => import('./FileManager').then(module => ({ 
+    default: module.FileManager 
+  }))),
+  SystemMonitor: lazy(() => import('./SystemMonitor').then(module => ({
+    default: module.SystemMonitor
+  }))),
+} as const;
+
+// Wrapper pour les composants personnalisés avec leur Provider
+const Providers = {
+  FileManager: FileManagerProvider,
+  SystemMonitor: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+} as const;
+
+// Composant wrapper mémorisé
+const CustomComponentWrapper = React.memo(({ componentName }: { componentName: keyof typeof CustomComponents }) => {
+  const Component = CustomComponents[componentName];
+  const Provider = Providers[componentName];
+  
+  if (!Component) {
+    console.error(`Component ${componentName} not found`);
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<LoadingBubble message="Chargement..." />}>
+      <Provider>
+        <Component />
+      </Provider>
+    </Suspense>
+  );
+});
 
 export const ChatInterface: React.FC = () => {
   const { theme } = useTheme();
@@ -24,17 +58,15 @@ export const ChatInterface: React.FC = () => {
   if (isLoading && !isNewConversation) {
     return (
       <View style={styles.mainContent}>
-        <LoadingBubble status="Chargement de la conversation..." />
+        <LoadingBubble message="Chargement de la conversation..." />
       </View>
     );
   }
 
-  if (tool?.customComponent) {
+  if (tool?.customComponent && tool.customComponent in CustomComponents) {
     return (
       <View style={styles.mainContent}>
-        <FileManagerProvider>
-          <FileManager />
-        </FileManagerProvider>
+        <CustomComponentWrapper componentName={tool.customComponent as keyof typeof CustomComponents} />
       </View>
     );
   }

@@ -134,7 +134,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                 value={newFolderName}
                 onChangeText={setNewFolderName}
                 placeholder="Nom du nouveau dossier"
-                style={styles.input}
+                style={[styles.input, { flex: 1 }]}
                 autoFocus
               />
               <TouchableOpacity
@@ -155,15 +155,17 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
             </View>
           )}
 
-          <FileList
-            files={files}
-            currentPath={currentModalPath}
-            onFileClick={handleFileClick}
-            directoryOnly={directoryOnly}
-            showSwipeActions={false}
-            showFileInfo={false}
-            disabledItems={itemToMove ? [itemToMove.path] : []}
-          />
+          <View style={styles.modalBody}>
+            <FileList
+              files={files}
+              currentPath={currentModalPath}
+              onFileClick={handleFileClick}
+              directoryOnly={directoryOnly}
+              showSwipeActions={false}
+              showFileInfo={false}
+              disabledItems={itemToMove ? [itemToMove.path] : []}
+            />
+          </View>
 
           <View style={styles.modalActions}>
             <TouchableOpacity

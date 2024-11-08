@@ -27,7 +27,7 @@ export interface ContainerStats {
     memory_usage: number;
     memory_limit: number;
   }
-  
+
   export interface Container {
     id: string;
     name: string;
