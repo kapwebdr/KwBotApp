@@ -5,7 +5,7 @@ interface TTSConfig {
   voice_path: string;
   language: string;
 }
-export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files' | 'monitoring' | 'audio_chat' | 'system_monitor' | 'db_manager';
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files' | 'monitoring' | 'audio_chat' | 'system_monitor' | 'db_manager' | 'task_manager' | 'calendar';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -1024,6 +1024,114 @@ export const TOOLS: Tool[] = [
         api: {
           path: '/storage/search',
           method: 'POST',
+          responseType: 'json',
+        },
+      },
+    ],
+  },
+  {
+    id: 'task_manager',
+    label: 'Tâches',
+    icon: 'checkbox',
+    customComponent: 'TaskManager',
+    actions: [
+      {
+        type: 'list_tasks',
+        handler: 'handleListTasks',
+        api: {
+          path: '/storage/list/tasks',
+          method: 'GET',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'add_task',
+        handler: 'handleAddTask',
+        api: {
+          path: '/storage/set',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            key: `task_${Date.now()}`,
+            value: params.task,
+            collection: 'tasks'
+          }),
+        },
+      },
+      {
+        type: 'update_task',
+        handler: 'handleUpdateTask',
+        api: {
+          path: '/storage/set',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            key: params.taskId,
+            value: params.task,
+            collection: 'tasks'
+          }),
+        },
+      },
+      {
+        type: 'delete_task',
+        handler: 'handleDeleteTask',
+        api: {
+          path: '/storage/delete/tasks/{taskId}',
+          method: 'DELETE',
+          responseType: 'json',
+        },
+      },
+    ],
+  },
+  {
+    id: 'calendar',
+    label: 'Calendrier',
+    icon: 'calendar',
+    customComponent: 'Calendar',
+    actions: [
+      {
+        type: 'list_events',
+        handler: 'handleListEvents',
+        api: {
+          path: '/storage/list/events',
+          method: 'GET',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'add_event',
+        handler: 'handleAddEvent',
+        api: {
+          path: '/storage/set',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            key: `event_${Date.now()}`,
+            value: params.event,
+            collection: 'events'
+          }),
+        },
+      },
+      {
+        type: 'update_event',
+        handler: 'handleUpdateEvent',
+        api: {
+          path: '/storage/set',
+          method: 'POST',
+          responseType: 'json',
+          requestTransform: (params) => ({
+            key: params.eventId,
+            value: params.event,
+            collection: 'events'
+          }),
+        },
+      },
+      {
+        type: 'delete_event',
+        handler: 'handleDeleteEvent',
+        api: {
+          path: '/storage/delete/events/{eventId}',
+          method: 'DELETE',
           responseType: 'json',
         },
       },

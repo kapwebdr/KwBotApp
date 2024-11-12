@@ -17,6 +17,12 @@ import { createNotificationsStyles } from './components/notifications.styles';
 import { createFilePreviewStyles } from './components/filePreview.styles';
 import { createSystemMonitorStyles } from './components/systemMonitor.styles';
 import { createDbManagerStyles } from './components/dbmanager.styles';
+import { createTaskManagerStyles } from './components/taskmanager.styles';
+import { createColorPickerStyles } from './components/colorpicker.styles';
+// import { createTaskCategoryStyles } from './components/taskcategory.styles';
+import { createCalendarStyles } from './components/calendar.styles';
+import { createDateTimePickerStyles } from './components/datetimepicker.styles';
+import { createCategoryStyles } from './components/category.styles';
 
 export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
@@ -38,6 +44,11 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     ...createFilePreviewStyles(theme),
     ...createSystemMonitorStyles(theme),
     ...createDbManagerStyles(theme),
+    ...createTaskManagerStyles(theme),
+    ...createColorPickerStyles(theme),
+    ...createCalendarStyles(theme),
+    ...createDateTimePickerStyles(theme),
+    ...createCategoryStyles(theme),
   };
 };
 

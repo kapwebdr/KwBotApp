@@ -23,6 +23,12 @@ const CustomComponents = {
   DbManager: lazy(() => import('./DbManager').then(module => ({
     default: module.DbManager
   }))),
+  TaskManager: lazy(() => import('./TaskManager').then(module => ({
+    default: module.TaskManager
+  }))),
+  Calendar: lazy(() => import('./Calendar').then(module => ({
+    default: module.Calendar
+  }))),
 } as const;
 
 // Wrapper pour les composants personnalisés avec leur Provider
@@ -30,6 +36,8 @@ const Providers = {
   FileManager: FileManagerProvider,
   SystemMonitor: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DbManager: DbManagerProvider,
+  TaskManager: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Calendar: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 } as const;
 
 // Composant wrapper mémorisé

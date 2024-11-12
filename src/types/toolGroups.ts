@@ -37,6 +37,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
     label: 'Paramètres',
     icon: 'settings',
     tools: ['files', 'system_monitor', 'db_manager']
+  },
+  {
+    id: 'organization',
+    label: 'Organisation',
+    icon: 'list',
+    tools: ['task_manager', 'calendar']
   }
 ];
 

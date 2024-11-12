@@ -1,5 +1,7 @@
 import { notificationService } from './notificationService';
 
+type Backend = 'redis' | 'mongo' | 'chroma';
+
 interface StorageSetParams {
   key: string;
   value: any;
@@ -26,6 +28,14 @@ interface SearchResult {
 
 interface SearchResponse {
   results: SearchResult[];
+}
+
+interface DatabasesResponse {
+  databases: string[];
+}
+
+interface CollectionsResponse {
+  collections: string[];
 }
 
 class StorageService {
@@ -118,6 +128,34 @@ class StorageService {
       return [];
     }
   }
+
+  async listDatabases(backend: Backend): Promise<DatabasesResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/databases?backend=${backend}`);
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des bases de données');
+      }
+      return await response.json();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      notificationService.notify('error', `Erreur lors de la liste des bases de données: ${errorMessage}`);
+      return { databases: [] };
+    }
+  }
+
+  async listCollections(backend: Backend): Promise<CollectionsResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/collections?backend=${backend}`);
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des collections');
+      }
+      return await response.json();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      notificationService.notify('error', `Erreur lors de la liste des collections: ${errorMessage}`);
+      return { collections: [] };
+    }
+  }
 }
 
-export const storageService = new StorageService(); 
+export const storageService = new StorageService();
