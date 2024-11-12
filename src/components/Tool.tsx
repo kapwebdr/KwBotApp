@@ -12,7 +12,6 @@ export const Tool: React.FC = () => {
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;
-    ('Tool height:', height);
     setToolHeight(height);
   }, [setToolHeight]);
 

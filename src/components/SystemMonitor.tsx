@@ -9,11 +9,17 @@ import { createStyles } from '../styles/theme.styles';
 import { BottomBar } from './BottomBar';
 import { useBottomPadding } from '../hooks/useBottomPadding';
 import { LoadingBubble } from './LoadingBubble';
+import { useTool } from '../hooks/useTool';
 
-interface LogMessage {
-  type: string;
-  message: string;
+interface LogEntry {
   timestamp: string;
+  message: string;
+}
+
+interface LogsResponse {
+  status: string;
+  container_id: string;
+  logs: LogEntry[];
 }
 
 export const SystemMonitor: React.FC = () => {
@@ -30,6 +36,8 @@ export const SystemMonitor: React.FC = () => {
   const styles = createStyles({ theme });
   const bottomPadding = useBottomPadding();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { setToolHeight } = useTool();
+  const [logRefreshInterval, setLogRefreshInterval] = useState<NodeJS.Timeout | null>(null);
 
   const fetchData = useCallback(async () => {
     if (isFetching) return;
@@ -54,8 +62,9 @@ export const SystemMonitor: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    setToolHeight(0);
     fetchData();
-    const interval = setInterval(fetchData, 60000);
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -108,38 +117,18 @@ export const SystemMonitor: React.FC = () => {
         { signal: controller.signal }
       );
 
-      const reader = response.body?.getReader();
-      if (!reader) return;
+      const data = await response.json() as LogsResponse;
 
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const jsonStr = line.slice(5).trim();
-              const data = JSON.parse(jsonStr) as LogMessage;
-              
-              const timestamp = new Date(data.timestamp).toLocaleTimeString();
-              const formattedLog = `[${timestamp}] ${data.message}`;
-              console.log('formattedLog', formattedLog);
-              setContainerLogs(prev => [...prev, formattedLog]);
-            } catch (error) {
-              console.error('Erreur lors du parsing des logs:', error);
-            }
-          }
-        }
+      if (data.status === 'success' && Array.isArray(data.logs)) {
+        const formattedLogs = data.logs.map(log => {
+          const timestamp = new Date(log.timestamp).toLocaleTimeString();
+          return `[${timestamp}] ${log.message}`;
+        });
+        
+        setContainerLogs(formattedLogs);
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Connexion logs annulée');
       } else {
         console.error('Erreur lors de la récupération des logs:', error);
@@ -151,28 +140,50 @@ export const SystemMonitor: React.FC = () => {
     }
   }, [addNotification]);
 
+  const startLogRefresh = useCallback((containerId: string) => {
+    if (logRefreshInterval) {
+      clearInterval(logRefreshInterval);
+    }
+
+    const interval = setInterval(() => {
+      fetchContainerLogs(containerId);
+    }, 10000);
+
+    setLogRefreshInterval(interval);
+  }, [fetchContainerLogs, logRefreshInterval]);
+
+  const stopLogRefresh = useCallback(() => {
+    if (logRefreshInterval) {
+      clearInterval(logRefreshInterval);
+      setLogRefreshInterval(null);
+    }
+  }, [logRefreshInterval]);
+
   const handleContainerClick = useCallback((containerId: string) => {
     if (selectedContainer === containerId) {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
+      stopLogRefresh();
       setSelectedContainer(null);
       setContainerLogs([]);
     } else {
       setSelectedContainer(containerId);
       setContainerLogs([]);
       fetchContainerLogs(containerId);
+      startLogRefresh(containerId);
     }
-  }, [selectedContainer, fetchContainerLogs]);
+  }, [selectedContainer, fetchContainerLogs, startLogRefresh, stopLogRefresh]);
 
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      stopLogRefresh();
     };
-  }, []);
+  }, [stopLogRefresh]);
 
   if (isInitialLoad) {
     return (
@@ -289,20 +300,3 @@ export const SystemMonitor: React.FC = () => {
     </View>
   );
 };
-
-const styles = createStyles(({ theme }) => ({
-  // ... styles existants ...
-  logsContainer: {
-    backgroundColor: theme.colors.gray100,
-    padding: 8,
-    maxHeight: 300,
-  },
-  logsScroll: {
-    maxHeight: 300,
-  },
-  logLine: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    paddingVertical: 2,
-  },
-}));

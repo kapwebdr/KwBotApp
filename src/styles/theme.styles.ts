@@ -16,6 +16,7 @@ import { createFileManagerStyles } from './components/fileManager.styles';
 import { createNotificationsStyles } from './components/notifications.styles';
 import { createFilePreviewStyles } from './components/filePreview.styles';
 import { createSystemMonitorStyles } from './components/systemMonitor.styles';
+import { createDbManagerStyles } from './components/dbmanager.styles';
 
 export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
@@ -36,6 +37,7 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     ...createNotificationsStyles(theme),
     ...createFilePreviewStyles(theme),
     ...createSystemMonitorStyles(theme),
+    ...createDbManagerStyles(theme),
   };
 };
 

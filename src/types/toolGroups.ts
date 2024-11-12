@@ -36,7 +36,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     id: 'settings',
     label: 'Paramètres',
     icon: 'settings',
-    tools: ['files', 'system_monitor']
+    tools: ['files', 'system_monitor', 'db_manager']
   }
 ];
 

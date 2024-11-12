@@ -10,6 +10,7 @@ import { LoadingBubble } from './LoadingBubble';
 import { Tool } from './Tool';
 import { BottomBar } from './BottomBar';
 import { FileManagerProvider } from '../contexts/FileManagerContext';
+import { DbManagerProvider } from '../contexts/DbManagerContext';
 
 // Mapping des composants personnalisés
 const CustomComponents = {
@@ -19,12 +20,16 @@ const CustomComponents = {
   SystemMonitor: lazy(() => import('./SystemMonitor').then(module => ({
     default: module.SystemMonitor
   }))),
+  DbManager: lazy(() => import('./DbManager').then(module => ({
+    default: module.DbManager
+  }))),
 } as const;
 
 // Wrapper pour les composants personnalisés avec leur Provider
 const Providers = {
   FileManager: FileManagerProvider,
   SystemMonitor: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DbManager: DbManagerProvider,
 } as const;
 
 // Composant wrapper mémorisé
@@ -57,7 +62,7 @@ export const ChatInterface: React.FC = () => {
 
   if (isLoading && !isNewConversation) {
     return (
-      <View style={styles.mainContent}>
+      <View style={[styles.mainContent, { flex: 1 }]}>
         <LoadingBubble message="Chargement de la conversation..." />
       </View>
     );
@@ -65,14 +70,14 @@ export const ChatInterface: React.FC = () => {
 
   if (tool?.customComponent && tool.customComponent in CustomComponents) {
     return (
-      <View style={styles.mainContent}>
+      <View style={[styles.mainContent, { flex: 1 }]}>
         <CustomComponentWrapper componentName={tool.customComponent as keyof typeof CustomComponents} />
       </View>
     );
   }
 
   return (
-    <View style={styles.mainContent}>
+    <View style={[styles.mainContent, { flex: 1 }]}>
       <Messages />
       <BottomBar ToolComponent={Tool} />
     </View>

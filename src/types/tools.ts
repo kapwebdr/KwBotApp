@@ -5,7 +5,7 @@ interface TTSConfig {
   voice_path: string;
   language: string;
 }
-export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files' | 'monitoring' | 'audio_chat';
+export type ToolType = 'llm' | 'image_generation' | 'image_analysis' | 'ocr' | 'image_refine' | 'translation' | 'text_to_speech' | 'speech_to_text' | 'files' | 'monitoring' | 'audio_chat' | 'system_monitor' | 'db_manager';
 export interface ToolConfig {
   model?: string;
   modelType?: string;
@@ -970,6 +970,59 @@ export const TOOLS: Tool[] = [
         handler: 'handleContainerAction',
         api: {
           path: '/monitor/containers/{containerId}/{action}',
+          method: 'POST',
+          responseType: 'json',
+        },
+      },
+    ],
+  },
+  {
+    id: 'db_manager',
+    label: 'Base de données',
+    icon: 'server',
+    customComponent: 'DbManager',
+    actions: [
+      {
+        type: 'set',
+        handler: 'handleSetData',
+        api: {
+          path: '/storage/set',
+          method: 'POST',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'get',
+        handler: 'handleGetData',
+        api: {
+          path: '/storage/get/{collection}/{key}',
+          method: 'GET',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'delete',
+        handler: 'handleDeleteData',
+        api: {
+          path: '/storage/delete/{collection}/{key}',
+          method: 'DELETE',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'list',
+        handler: 'handleListData',
+        api: {
+          path: '/storage/list/{collection}',
+          method: 'GET',
+          responseType: 'json',
+        },
+      },
+      {
+        type: 'search',
+        handler: 'handleSearchData',
+        api: {
+          path: '/storage/search',
           method: 'POST',
           responseType: 'json',
         },

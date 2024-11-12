@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -13,7 +13,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { FileList } from './FileList';
 import { FilePreview } from './FilePreview';
 import { FileItem } from '../types/files';
-
+import { useTool } from '../hooks/useTool';
 export const FileManager: React.FC = () => {
   const { theme } = useTheme();
   const styles = createStyles({ theme });
@@ -43,7 +43,7 @@ export const FileManager: React.FC = () => {
   const [fileToRename, setFileToRename] = useState<FileItem | null>(null);
   const [showRenameInput, setShowRenameInput] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-
+  const { setToolHeight } = useTool();
   const handleCreateFolderSubmit = async () => {
     if (!newFolderName.trim()) return;
     
@@ -54,6 +54,9 @@ export const FileManager: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    setToolHeight(70);
+  }, [setToolHeight]);
   const handleMoveFile = async (destination: string) => {
     if (!fileToMove?.path) return;
     
