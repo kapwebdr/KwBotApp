@@ -1,7 +1,7 @@
 import { CalendarEvent } from '../types/calendar';
 import { storageService } from './storageService';
 import { notificationService } from './notificationService';
-
+import { StorageResponse } from '../types/storage';
 class CalendarService {
   private readonly COLLECTION = 'events';
 
@@ -21,7 +21,7 @@ class CalendarService {
     }
   }
 
-  async addEvent(event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> {
+  async addEvent(event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<StorageResponse> {
     try {
       const now = new Date().toISOString();
       const newEvent: CalendarEvent = {
@@ -37,18 +37,18 @@ class CalendarService {
         collection: this.COLLECTION,
       });
 
-      if (success) {
+      if (success.status === 'success') {
         notificationService.notify('success', 'Événement ajouté avec succès');
       }
       return success;
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'événement:', error);
       notificationService.notify('error', 'Erreur lors de l\'ajout de l\'événement');
-      return false;
+      return { status: 'error', key: '' };
     }
   }
 
-  async updateEvent(event: CalendarEvent): Promise<boolean> {
+  async updateEvent(event: CalendarEvent): Promise<StorageResponse> {
     try {
       const success = await storageService.set({
         key: event.id,
@@ -56,14 +56,14 @@ class CalendarService {
         collection: this.COLLECTION,
       });
 
-      if (success) {
+      if (success.status === 'success') {
         notificationService.notify('success', 'Événement mis à jour avec succès');
       }
       return success;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'événement:', error);
       notificationService.notify('error', 'Erreur lors de la mise à jour de l\'événement');
-      return false;
+      return { status: 'error', key: '' };
     }
   }
 

@@ -21,13 +21,8 @@ export const createBottomBarStyles = (theme: Theme) => {
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 8,
+        position: 'relative',
       },
-    //   bottomBarItem: {
-    //     alignItems: 'center',
-    //     justifyContent: 'center',
-    //     paddingVertical: 8,
-    //     position: 'relative',
-    //   },
       bottomBarLabel: {
         fontSize: 12,
         marginTop: 4,

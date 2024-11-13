@@ -1,7 +1,7 @@
 import { Task } from '../types/tasks';
 import { storageService } from './storageService';
 import { notificationService } from './notificationService';
-
+import { StorageResponse } from '../types/storage';
 class TaskService {
   private readonly COLLECTION = 'tasks';
 
@@ -21,7 +21,7 @@ class TaskService {
     }
   }
 
-  async addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> {
+  async addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<StorageResponse> {
     try {
       const now = new Date().toISOString();
       const newTask: Task = {
@@ -37,14 +37,14 @@ class TaskService {
         collection: this.COLLECTION,
       });
 
-      if (success) {
+      if (success.status === 'success') {
         notificationService.notify('success', 'Tâche ajoutée avec succès');
       }
       return success;
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la tâche:', error);
       notificationService.notify('error', 'Erreur lors de l\'ajout de la tâche');
-      return false;
+      return { status: 'error', key: '' };
     }
   }
 

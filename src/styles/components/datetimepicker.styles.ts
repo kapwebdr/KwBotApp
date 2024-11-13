@@ -160,4 +160,4 @@ export const createDateTimePickerStyles = (theme: Theme) => ({
     fontWeight: '500',
     color: theme.colors.background,
   } as TextStyle,
-}); 
+});

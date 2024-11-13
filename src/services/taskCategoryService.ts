@@ -1,7 +1,7 @@
 import { TaskCategory } from '../types/tasks';
 import { storageService } from './storageService';
 import { notificationService } from './notificationService';
-
+import { StorageResponse } from '../types/storage';
 class TaskCategoryService {
   private readonly COLLECTION = 'task_categories';
 
@@ -21,7 +21,7 @@ class TaskCategoryService {
     }
   }
 
-  async addCategory(name: string, color: string): Promise<boolean> {
+  async addCategory(name: string, color: string): Promise<StorageResponse> {
     try {
       const id = `category_${Date.now()}`;
       const category: TaskCategory = {
@@ -36,18 +36,18 @@ class TaskCategoryService {
         collection: this.COLLECTION,
       });
 
-      if (success) {
+      if (success.status === 'success') {
         notificationService.notify('success', 'Catégorie ajoutée avec succès');
       }
       return success;
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la catégorie:', error);
       notificationService.notify('error', 'Erreur lors de l\'ajout de la catégorie');
-      return false;
+      return { status: 'error', key: '' };
     }
   }
 
-  async updateCategory(category: TaskCategory): Promise<boolean> {
+  async updateCategory(category: TaskCategory): Promise<StorageResponse> {
     try {
       const success = await storageService.set({
         key: category.id,
@@ -55,14 +55,14 @@ class TaskCategoryService {
         collection: this.COLLECTION,
       });
 
-      if (success) {
+      if (success.status === 'success') {
         notificationService.notify('success', 'Catégorie mise à jour avec succès');
       }
       return success;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la catégorie:', error);
       notificationService.notify('error', 'Erreur lors de la mise à jour de la catégorie');
-      return false;
+      return { status: 'error', key: '' };
     }
   }
 

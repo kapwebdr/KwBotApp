@@ -149,4 +149,4 @@ export const createModalStyles = (theme: Theme) => ({
   modalConfirmInfo: {
     backgroundColor: theme.colors.primary,
   },
-}); 
+});

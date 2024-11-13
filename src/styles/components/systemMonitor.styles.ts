@@ -77,4 +77,35 @@ export const createSystemMonitorStyles = (theme: Theme) => ({
     padding: 8,
     borderRadius: 4,
   },
-}); 
+  logsContainer: {
+    marginTop: 8,
+    backgroundColor: theme.colors.gray100,
+    borderRadius: 8,
+    overflow: 'hidden',
+  } as ViewStyle,
+  logsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  } as ViewStyle,
+  logsTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  } as TextStyle,
+  refreshButton: {
+    padding: 4,
+    borderRadius: 4,
+  } as ViewStyle,
+  logsScroll: {
+    maxHeight: 200,
+    padding: 8,
+  } as ViewStyle,
+  logLine: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    marginBottom: 4,
+  } as TextStyle,
+});

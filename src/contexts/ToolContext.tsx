@@ -1,11 +1,22 @@
 import React, { createContext, useState, useEffect, useMemo } from 'react';
-import { ToolType, ToolConfig, TOOLS, ToolContextType, ToolState } from '../types/tools';
+import { ToolType, ToolConfig, TOOLS, ToolContextType, ToolState, ToolFeatures, ToolAction } from '../types/tools';
 import { ActionType } from '../types/api';
 import { useConversation } from './ConversationContext';
 import { apiHandler } from '../services/apiHandler';
 import { useLoading } from '../hooks/useLoading';
 
-export const ToolContext = createContext<ToolContextType | null>(null);
+// Ajout du type pour currentToolConfig
+type CurrentToolConfig = {
+  tool: Tool | undefined;
+  state: ToolState | undefined;
+  config: ToolConfig;
+  features: ToolFeatures | undefined;
+  actions: ToolAction[];
+  isGenerating: boolean;
+  loading: ReturnType<typeof useLoading>;
+};
+
+export const ToolContext = createContext<(ToolContextType & { currentToolConfig: CurrentToolConfig }) | null>(null);
 
 export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
@@ -241,7 +252,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!tool?.configFields) return {};
     return tool.configFields.reduce((configs, field) => {
       if (field.type === 'select') {
-        
         configs[field.name] = {
           value: toolStates[currentTool]?.config[field.name] || field.defaultValue || '',
           options: availableOptions[field.name] || field.options || [],
@@ -255,7 +265,6 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const params = { [paramName]: value };
               const loadingTxt = apiAction.loadingTxt || '...';
               loading.startLoading(loadingTxt, 0);
-  
               try {
                 const success = await apiHandler.executeApiAction(
                   currentTool,
@@ -263,14 +272,12 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   params,
                   loading.updateProgress
                 );
-  
                 if (success) {
                   updateToolConfig({ [field.name]: value });
                   loading.stopLoading();
                 }
               } catch (error) {
                 console.error(`Erreur lors de l'action ${actionType}:`, error);
-  
                 updateToolConfig({ [field.name]: undefined });
                 setToolStates(prev => ({
                   ...prev,
@@ -364,6 +371,21 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Ajout du currentToolConfig avec useMemo
+  const currentToolConfig = useMemo(() => {
+    const tool = TOOLS.find(t => t.id === currentTool);
+    return {
+      tool,
+      state: toolStates[currentTool],
+      config: toolStates[currentTool]?.config || {},
+      features: tool?.features,
+      actions: tool?.actions || [],
+      isGenerating,
+      loading,
+    };
+  }, [currentTool, toolStates, isGenerating, loading]);
+
+  // Mise à jour de value pour inclure currentToolConfig
   const value = {
     currentTool,
     setCurrentTool,
@@ -381,6 +403,7 @@ export const ToolProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toolHeight,
     setToolHeight,
     executeToolAction,
+    currentToolConfig, // Ajout de currentToolConfig
   };
 
   return (

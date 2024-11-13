@@ -9,7 +9,6 @@ import { createMessagesStyles } from './components/messages.styles';
 import { createToolConfigStyles } from './components/toolconfig.styles';
 import { createPendingFilesStyles } from './components/pendingfiles.styles';
 import { createBottomBarStyles } from './components/bottombar.styles';
-import { createFormInputStyles } from './components/forminput.styles';
 import { createTopBarStyles } from './components/topbar.styles';
 import { createProgressBubbleStyles } from './components/progressbubble.styles';
 import { createFileManagerStyles } from './components/fileManager.styles';
@@ -19,11 +18,12 @@ import { createSystemMonitorStyles } from './components/systemMonitor.styles';
 import { createDbManagerStyles } from './components/dbmanager.styles';
 import { createTaskManagerStyles } from './components/taskmanager.styles';
 import { createColorPickerStyles } from './components/colorpicker.styles';
-// import { createTaskCategoryStyles } from './components/taskcategory.styles';
 import { createCalendarStyles } from './components/calendar.styles';
 import { createDateTimePickerStyles } from './components/datetimepicker.styles';
 import { createCategoryStyles } from './components/category.styles';
-
+import { createFormStyles } from './components/form.styles';
+import { createBreadcrumbStyles } from './components/breadcrumb.styles';
+import { createListStyles } from './components/list.styles';
 export const createStyles = (themeContext: { theme: Theme }) => {
   const theme = themeContext?.theme || lightTheme;
 
@@ -36,7 +36,6 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     ...createToolConfigStyles(theme),
     ...createPendingFilesStyles(theme),
     ...createBottomBarStyles(theme),
-    ...createFormInputStyles(theme),
     ...createTopBarStyles(theme),
     ...createProgressBubbleStyles(theme),
     ...createFileManagerStyles(theme),
@@ -49,6 +48,9 @@ export const createStyles = (themeContext: { theme: Theme }) => {
     ...createCalendarStyles(theme),
     ...createDateTimePickerStyles(theme),
     ...createCategoryStyles(theme),
+    ...createFormStyles(theme),
+    ...createBreadcrumbStyles(theme),
+    ...createListStyles(theme),
   };
 };
 

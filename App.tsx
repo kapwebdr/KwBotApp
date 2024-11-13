@@ -6,10 +6,10 @@ import { ThemeProvider } from './src/contexts/ThemeContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import { ConversationProvider } from './src/contexts/ConversationContext';
 import { ToolProvider } from './src/contexts/ToolContext';
-import { NotificationManager } from './src/components/NotificationManager';
+import { NotificationManager } from './src/components/main/NotificationManager';
 import { useNotification } from './src/hooks/useNotification';
 import { notificationService } from './src/services/notificationService';
-import ChatBot from './src/ChatBot';
+import AppTools from './src/AppTools';
 
 const AppContent: React.FC = () => {
   const { addNotification } = useNotification();
@@ -35,7 +35,7 @@ const AppContent: React.FC = () => {
         <NotificationManager />
         <ConversationProvider>
           <ToolProvider>
-            <ChatBot />
+            <AppTools />
           </ToolProvider>
         </ConversationProvider>
       </View>

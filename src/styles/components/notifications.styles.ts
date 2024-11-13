@@ -1,7 +1,6 @@
 import { Theme } from '../../types/themes';
 
 export const createNotificationsStyles = (theme: Theme) => ({
-    
     notificationContainer: {
         position: 'absolute',
         top: 0,
@@ -14,7 +13,6 @@ export const createNotificationsStyles = (theme: Theme) => ({
         flexDirection: 'column',
         gap: 8,
       },
-  
       notification: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -28,20 +26,17 @@ export const createNotificationsStyles = (theme: Theme) => ({
         elevation: 3,
         maxHeight: 60,
       },
-  
       notificationContent: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
         flex: 1,
       },
-  
       notificationText: {
         fontSize: theme.fontSizes.medium,
         color: theme.colors.text,
         flex: 1,
       },
-  
       notificationClose: {
         padding: 8,
         borderRadius: 4,
@@ -53,30 +48,25 @@ export const createNotificationsStyles = (theme: Theme) => ({
           backgroundColor: 'rgba(0, 0, 0, 0.1)',
         },
       },
-  
       // Styles spécifiques par type
       notificationsuccess: {
         backgroundColor: `${theme.colors.success}40`,
         borderLeftWidth: 4,
         borderLeftColor: theme.colors.success,
       },
-  
       notificationerror: {
         backgroundColor: `${theme.colors.error}40`,
         borderLeftWidth: 4,
         borderLeftColor: theme.colors.error,
       },
-  
       notificationwarning: {
         backgroundColor: `${theme.colors.warning}40`,
         borderLeftWidth: 4,
         borderLeftColor: theme.colors.warning,
       },
-  
       notificationinfo: {
         backgroundColor: `${theme.colors.info}40`,
         borderLeftWidth: 4,
         borderLeftColor: theme.colors.info,
       },
-  
 });

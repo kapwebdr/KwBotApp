@@ -1,43 +1,5 @@
 import { notificationService } from './notificationService';
-
-type Backend = 'redis' | 'mongo' | 'chroma';
-
-interface StorageSetParams {
-  key: string;
-  value: any;
-  collection?: string;
-}
-
-interface StorageSearchParams {
-  query: string;
-  collection?: string;
-  n_results?: number;
-}
-
-interface StorageResponse {
-  status: string;
-  key: string;
-}
-
-interface SearchResult {
-  id: string;
-  document: any;
-  metadata: any;
-  distance?: number;
-}
-
-interface SearchResponse {
-  results: SearchResult[];
-}
-
-interface DatabasesResponse {
-  databases: string[];
-}
-
-interface CollectionsResponse {
-  collections: string[];
-}
-
+import { StorageSetParams, StorageResponse, SearchResult, SearchResponse, DatabasesResponse, CollectionsResponse, Backend } from '../types/storage';
 class StorageService {
   private baseUrl: string;
 
@@ -45,7 +7,7 @@ class StorageService {
     this.baseUrl = `${process.env.BASE_API_URL}/storage`;
   }
 
-  async set(params: StorageSetParams): Promise<boolean> {
+  async set(params: StorageSetParams): Promise<StorageResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/set`, {
         method: 'POST',
@@ -56,11 +18,11 @@ class StorageService {
       });
 
       const result = await response.json() as StorageResponse;
-      return result.status === 'success';
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       notificationService.notify('error', `Erreur lors de la sauvegarde: ${errorMessage}`);
-      return false;
+      return { status: 'error', key: '' };
     }
   }
 

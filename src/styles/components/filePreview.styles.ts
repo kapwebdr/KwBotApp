@@ -41,7 +41,6 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         maxWidth: '90%',
         maxHeight: '90%',
       },
-  
       filePreviewModalOverlay: {
         position: 'absolute',
         top: 0,
@@ -63,7 +62,6 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         borderBottomColor: theme.colors.border,
         minHeight: 60,
       },
-  
       filePreviewTitle: {
         fontSize: 18,
         fontWeight: 'bold',
@@ -71,11 +69,9 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         flex: 1,
         marginRight: 16,
       },
-  
       filePreviewCloseButton: {
         padding: 8,
       },
-  
       filePreviewContent: {
         flex: 1,
         position: 'relative',
@@ -84,7 +80,6 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         minHeight: 200,
         overflow: 'auto',
       },
-  
       filePreviewLoadingContainer: {
         position: 'absolute',
         top: 0,
@@ -95,47 +90,40 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         alignItems: 'center',
         backgroundColor: theme.colors.background,
       },
-  
       filePreviewErrorContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 20,
       },
-  
       filePreviewErrorText: {
         color: theme.colors.error,
         textAlign: 'center',
         marginTop: 8,
       },
-  
       filePreviewImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'contain',
         minHeight: 200,
       },
-  
       filePreviewVideo: {
         width: '100%',
         height: '100%',
         minHeight: 300,
         maxHeight: '70%',
       },
-  
       filePreviewAudio: {
         width: '100%',
         minWidth: 300,
         padding: 20,
       },
-  
       filePreviewPdf: {
         width: '100%',
         height: '100%',
         minHeight: 500,
         border: 'none',
       },
-  
       filePreviewUnsupportedContainer: {
         flex: 1,
         alignItems: 'center',
@@ -143,13 +131,11 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         padding: 20,
         gap: 16,
       },
-  
       filePreviewUnsupportedText: {
         color: theme.colors.text,
         textAlign: 'center',
         marginBottom: 16,
       },
-  
       filePreviewTextContainer: {
         width: '100%',
         height: '100%',
@@ -157,7 +143,6 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         backgroundColor: theme.colors.background,
         minHeight: 200,
       },
-  
       filePreviewTextContent: {
         color: theme.colors.text,
         fontFamily: 'monospace',
@@ -166,48 +151,15 @@ export const createFilePreviewStyles = (theme: Theme) => ({
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
       },
-  
       filePreviewHeaderActions: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
       },
-  
       filePreviewHeaderButton: {
         padding: 8,
         borderRadius: 4,
         backgroundColor: theme.colors.gray100,
       },
-  
-    //   filePreviewContainer: {
-    //     flex: 1,
-    //     backgroundColor: theme.colors.background,
-    //     borderRadius: 8,
-    //     overflow: 'hidden',
-    //     width: '100%',
-    //     height: '100%',
-    //     maxWidth: '90%',
-    //     maxHeight: '90%',
-    //   },
-    //   filePreviewModalOverlay: {
-    //     position: 'absolute',
-    //     top: 0,
-    //     left: 0,
-    //     right: 0,
-    //     bottom: 0,
-    //     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    //     justifyContent: 'center',
-    //     alignItems: 'center',
-    //     zIndex: 1000,
-    //   },
-    //   filePreviewHeader: {
-    //     flexDirection: 'row',
-    //     justifyContent: 'space-between',
-    //     alignItems: 'center',
-    //     padding: 16,
-    //     borderBottomWidth: 1,
-    //     borderBottomColor: theme.colors.border,
-    //     minHeight: 60,
-    //   },
-  // ... autres styles liés au FilePreview
-}); 
+
+});

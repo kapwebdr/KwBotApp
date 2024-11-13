@@ -45,7 +45,7 @@ export const DbManagerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         value,
         collection: currentCollection
       });
-      if (success) {
+      if (success.status === 'success') {
         await loadItems();
         notificationService.notify('success', 'Données sauvegardées avec succès');
       }
@@ -53,7 +53,7 @@ export const DbManagerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       notificationService.notify('error', 'Erreur lors de la sauvegarde');
-      return false;
+      return { status: 'error', key: '' };
     }
   }, [currentCollection, loadItems]);
 

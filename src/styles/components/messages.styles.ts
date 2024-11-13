@@ -134,13 +134,6 @@ export const createMessagesStyles = (theme: Theme) => {
         maxWidth: 400,
         marginVertical: 4,
       },
-
-    // codeBlockContainer: {
-    //   backgroundColor: theme.colors.codeBackground,
-    //   borderRadius: 8,
-    //   marginVertical: 8,
-    //   overflow: 'hidden',
-    // },
     codeBlockHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',

@@ -1,5 +1,16 @@
+
 import { ActionType, ApiEndpoint } from './api';
 import { useLoading } from '../hooks/useLoading';
+
+import { Chat } from '../components/Chat';
+import { Calendar } from '../components/Calendar';
+import { DbManager } from '../components/DbManager';
+import { SystemMonitor } from '../components/SystemMonitor';
+import { FileManager } from '../components/FileManager';
+import { TaskManager } from '../components/TaskManager';
+import { FileManagerProvider } from '../contexts/FileManagerContext';
+import { DbManagerProvider } from '../contexts/DbManagerContext';
+
 interface TTSConfig {
   enabled: boolean;
   voice_path: string;
@@ -19,7 +30,6 @@ export interface ToolConfig {
   tts?: TTSConfig;
   [key: string]: any;
 }
-
 export interface ToolFeatures {
   promptInput?: {
     placeholder?: string;
@@ -34,7 +44,6 @@ export interface ToolFeatures {
   };
   urlInput?: boolean;
 }
-
 export interface ToolConfigField {
   name: string;
   label: string;
@@ -56,7 +65,6 @@ export interface ToolConfigField {
     replaceInPath?: string;
   };
 }
-
 export interface ToolContextType {
   currentTool: ToolType;
   toolStates: Record<ToolType, ToolState>;
@@ -74,14 +82,12 @@ export interface ToolContextType {
   selectConfigs: Record<string, any>;
   loading: ReturnType<typeof useLoading>;
 }
-
 export interface ToolState {
   config: ToolConfig;
   availableOptions?: string[];
   input?: string;
   pendingFiles?: Array<{ name: string; file: File; }>;
 }
-
 export interface ToolAction {
   type: ActionType;
   handler: string;
@@ -104,11 +110,12 @@ export interface ToolAction {
   };
   api: ApiEndpoint;
 }
-
 export interface Tool {
   id: ToolType;
   label: string;
   icon: string;
+  component?: string;
+  provider?: [string?];
   features?: ToolFeatures;
   configFields?: ToolConfigField[];
   defaultConfig?: ToolConfig;
@@ -122,12 +129,13 @@ export interface Tool {
     load?: ApiEndpoint;
   };
 }
-
 export const TOOLS: Tool[] = [
   {
     id: 'llm',
     label: 'Chat',
     icon: 'chatbubbles',
+    component: Chat,
+    provider: [],
     features: {
       promptInput: {
         placeholder: 'Tapez votre message...',
@@ -217,6 +225,7 @@ export const TOOLS: Tool[] = [
     id: 'image_generation',
     label: 'Génération d\'image',
     icon: 'image',
+    component: Chat,
     features: {
       promptInput: {
         placeholder: 'Entrez un prompt...',
@@ -338,6 +347,7 @@ export const TOOLS: Tool[] = [
     id: 'image_analysis',
     label: 'Analyse d\'image',
     icon: 'scan',
+    component: Chat,
     features: {
       fileUpload: {
         accept: ['image/*'],
@@ -378,6 +388,7 @@ export const TOOLS: Tool[] = [
     id: 'ocr',
     label: 'Extraction de texte',
     icon: 'text',
+    component: Chat,
     features: {
       fileUpload: {
         accept: ['image/*'],
@@ -427,6 +438,7 @@ export const TOOLS: Tool[] = [
   {
     id: 'image_refine',
     label: 'Amélioration d\'image',
+    component: Chat,
     icon: 'brush',
     features: {
       promptInput: {
@@ -498,6 +510,7 @@ export const TOOLS: Tool[] = [
     id: 'translation',
     label: 'Traduction',
     icon: 'language',
+    component: Chat,
     features: {
       promptInput: {
         placeholder: 'Entrez le texte à traduire...',
@@ -566,6 +579,7 @@ export const TOOLS: Tool[] = [
     id: 'text_to_speech',
     label: 'Synthèse vocale',
     icon: 'volume-high',
+    component: Chat,
     features: {
       promptInput: {
         placeholder: 'Entrez le texte à convertir en audio...',
@@ -669,6 +683,7 @@ export const TOOLS: Tool[] = [
     id: 'speech_to_text',
     label: 'Reconnaissance Vocale',
     icon: 'mic',
+    component: Chat,
     features: {
       fileUpload: {
         accept: ['audio/*'],
@@ -762,43 +777,10 @@ export const TOOLS: Tool[] = [
     },
   },
   {
-    id: 'monitoring',
-    label: 'Monitoring',
-    icon: 'analytics',
-    actions: [
-      {
-        type: 'systemStats',
-        handler: 'handleSystemStats',
-        api: {
-          path: '/monitor/system/stats',
-          method: 'GET',
-          responseType: 'json',
-        },
-      },
-      {
-        type: 'containersList',
-        handler: 'handleContainersList',
-        api: {
-          path: '/monitor/containers',
-          method: 'GET',
-          responseType: 'json',
-        },
-      },
-      {
-        type: 'execute',
-        handler: 'handleContainerAction',
-        api: {
-          path: '/monitor/containers/{containerId}/{action}',
-          method: 'POST',
-          responseType: 'json',
-        },
-      },
-    ],
-  },
-  {
     id: 'audio_chat',
     label: 'Chat Audio',
     icon: 'mic-circle',
+    component: Chat,
     features: {
       promptInput: {
         placeholder: 'Tapez votre message...',
@@ -869,7 +851,8 @@ export const TOOLS: Tool[] = [
     id: 'files',
     label: 'Gestionnaire de fichiers',
     icon: 'folder',
-    customComponent: 'FileManager',
+    component: FileManager,
+    providers: [FileManagerProvider],
     features: {
       fileUpload: {
         accept: ['*/*'],
@@ -945,7 +928,7 @@ export const TOOLS: Tool[] = [
     id: 'system_monitor',
     label: 'Monitoring Système',
     icon: 'analytics',
-    customComponent: 'SystemMonitor',
+    component: SystemMonitor,
     actions: [
       {
         type: 'systemStats',
@@ -980,7 +963,8 @@ export const TOOLS: Tool[] = [
     id: 'db_manager',
     label: 'Base de données',
     icon: 'server',
-    customComponent: 'DbManager',
+    component: DbManager,
+    providers: [DbManagerProvider],
     actions: [
       {
         type: 'set',
@@ -1033,7 +1017,7 @@ export const TOOLS: Tool[] = [
     id: 'task_manager',
     label: 'Tâches',
     icon: 'checkbox',
-    customComponent: 'TaskManager',
+    component: TaskManager,
     actions: [
       {
         type: 'list_tasks',
@@ -1087,7 +1071,7 @@ export const TOOLS: Tool[] = [
     id: 'calendar',
     label: 'Calendrier',
     icon: 'calendar',
-    customComponent: 'Calendar',
+    component: Calendar,
     actions: [
       {
         type: 'list_events',

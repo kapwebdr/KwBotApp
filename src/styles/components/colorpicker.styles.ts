@@ -67,4 +67,4 @@ export const createColorPickerStyles = (theme: Theme) => ({
     color: theme.colors.text,
     fontWeight: 'bold',
   } as TextStyle,
-}); 
+});
